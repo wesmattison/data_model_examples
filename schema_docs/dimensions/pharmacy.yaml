@@ -1,0 +1,450 @@
+# Pharmacy Dimension Table Schema
+# Status: REVIEWED - Standard pharmacy location dimension
+# Created: 2026-02-09
+
+table:
+  name: catalog.schema.dim_pharmacy  # TODO: Update with actual catalog.schema
+  type: dimension
+  description: "Pharmacy location dimension containing pharmacy identifiers, names, addresses, and classification information. Used to identify retail pharmacies, mail-order pharmacies, and specialty pharmacies in pharmacy claims analysis. One row per unique pharmacy location."
+  grain: "One row per unique pharmacy location"
+  source_system: "TODO: Identify source system"
+  refresh_frequency: "TODO: Specify refresh frequency"
+  
+  primary_key: [Pharmacy_Sk]
+  
+  # Natural key is the NCPDP ID (standard pharmacy identifier)
+  natural_key: [PharmacyNCPDPID]
+  
+  data_quality_notes:
+    - "NCPDP ID is the National Council for Prescription Drug Programs standard identifier"
+    - "NPI is the National Provider Identifier for the pharmacy"
+    - "Address fields support geographic analysis and network management"
+    - "DispenserClassCode categorizes pharmacy types (retail, mail, specialty, etc.)"
+
+columns:
+  # Surrogate Key
+  - name: Pharmacy_Sk
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "System-generated surrogate key - use for joins to pharmacy fact tables only"
+    
+    genie:
+      description: "Unique system-generated identifier for each pharmacy location"
+      synonyms: ["pharmacy key"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+      unique: true
+      primary_key: true
+
+  # Primary Natural Keys
+  - name: PharmacyNCPDPID
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: natural_key
+      reason: "NCPDP ID - standard national pharmacy identifier, essential for pharmacy identification"
+    
+    genie:
+      description: "National Council for Prescription Drug Programs (NCPDP) provider ID - a unique 7-digit identifier assigned to each pharmacy location in the United States"
+      synonyms: ["NCPDP", "NCPDP ID", "pharmacy ID", "pharmacy number"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+      unique: true
+    
+    sample_values: ["1234567", "9876543"]
+    
+    notes: "Standard 7-digit format. Required for pharmacy claims processing and network management."
+
+  - name: PharmacyNPI
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: natural_key
+      reason: "NPI - National Provider Identifier for the pharmacy"
+    
+    genie:
+      description: "National Provider Identifier (NPI) - a unique 10-digit identification number for the pharmacy as a healthcare provider"
+      synonyms: ["NPI", "pharmacy NPI", "provider number"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+      unique: false
+    
+    sample_values: ["1234567890", "9876543210"]
+    
+    notes: "Standard 10-digit format. Some pharmacies may share NPIs if part of same organization."
+
+  - name: PharmacyTaxIDNumber
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: natural_key
+      reason: "Federal Tax ID - useful for organizational grouping and financial analysis"
+    
+    genie:
+      description: "Federal Tax Identification Number (EIN/TIN) for the pharmacy organization"
+      synonyms: ["tax ID", "EIN", "TIN", "federal tax ID"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["12-3456789", "98-7654321"]
+    
+    notes: "Used to group pharmacies by parent organization. Multiple locations may share same Tax ID."
+
+  - name: PharmacyDEANumber
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: natural_key
+      reason: "DEA number - required for controlled substance dispensing"
+    
+    genie:
+      description: "Drug Enforcement Administration (DEA) registration number - required for pharmacies that dispense controlled substances"
+      synonyms: ["DEA number", "DEA registration"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: []
+    
+    notes: "Required for Schedule II-V controlled substance dispensing. Format varies by registrant type."
+
+  # Pharmacy Name
+  - name: PharmacyName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "PRIMARY FIELD: Pharmacy name - main display name for pharmacy locations"
+    
+    genie:
+      description: "Name of the pharmacy location (e.g., 'CVS Pharmacy #1234', 'Walgreens Store 5678', 'ABC Community Pharmacy')"
+      synonyms: ["pharmacy", "pharmacy name", "store name"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["CVS Pharmacy #1234", "Walgreens #5678", "Kroger Pharmacy", "Mail Order Pharmacy"]
+
+  # Address Fields
+  - name: PharmacyAddress
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Street address line 1 - useful for location identification"
+    
+    genie:
+      description: "Primary street address of the pharmacy location"
+      synonyms: ["address", "street address", "pharmacy address"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["123 Main Street", "456 Oak Avenue"]
+
+  - name: PharmacyAddress2
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Street address line 2 - for suite/unit numbers"
+    
+    genie:
+      description: "Secondary address line (suite, unit, building number, etc.)"
+      synonyms: ["address line 2", "suite"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["Suite 100", "Unit B", "Building 2"]
+
+  - name: PharmacyCity
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "City - important for geographic analysis and network adequacy"
+    
+    genie:
+      description: "City where the pharmacy is located"
+      synonyms: ["city", "pharmacy city"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["Columbus", "Cleveland", "Cincinnati", "Toledo"]
+
+  - name: PharmacyCounty
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "County - useful for county-level analysis and rural/urban classification"
+    
+    genie:
+      description: "County where the pharmacy is located"
+      synonyms: ["county", "pharmacy county"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["Franklin County", "Cuyahoga County", "Hamilton County"]
+
+  - name: PharmacyStateCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "State code - essential for state-level analysis and network management"
+    
+    genie:
+      description: "Two-letter US state code where the pharmacy is located"
+      synonyms: ["state", "state code", "pharmacy state"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["OH", "CA", "TX", "NY", "FL"]
+    
+    notes: "Standard two-letter state abbreviation"
+
+  - name: PharmacyPostalCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "ZIP code - useful for geographic analysis and distance calculations"
+    
+    genie:
+      description: "US Postal ZIP code for the pharmacy location (5-digit or ZIP+4 format)"
+      synonyms: ["ZIP code", "postal code", "ZIP"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["43215", "43215-1234", "90210", "10001"]
+    
+    notes: "May be 5-digit (43215) or ZIP+4 format (43215-1234)"
+
+  # Pharmacy Classification
+  - name: PharmacyGroup
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Pharmacy group/chain affiliation - useful for chain vs independent analysis"
+    
+    genie:
+      description: "Pharmacy chain or group affiliation (e.g., 'CVS', 'Walgreens', 'Independent', 'Regional Chain')"
+      synonyms: ["pharmacy chain", "pharmacy group", "chain", "banner"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["CVS", "Walgreens", "Kroger", "Independent", "Mail Order"]
+    
+    notes: "Helps identify national chains vs regional chains vs independent pharmacies"
+
+  - name: DispenserClassCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Dispenser class code - categorizes pharmacy type (retail, mail, specialty, etc.)"
+    
+    genie:
+      description: "Code classifying the type of pharmacy dispenser (e.g., retail, mail order, specialty, long-term care, clinic)"
+      synonyms: ["dispenser class", "pharmacy type", "pharmacy class"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["01", "02", "03", "04"]
+    
+    notes: "Common codes: 01=Retail, 02=Mail Order, 03=Long-term Care, 04=Specialty (codes may vary by system)"
+
+  - name: DispenserClassCodeDescription
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Dispenser class description - primary field for pharmacy type analysis"
+    
+    genie:
+      description: "Description of pharmacy dispenser type (e.g., 'Retail Pharmacy', 'Mail Order Pharmacy', 'Specialty Pharmacy', 'Long-term Care Pharmacy')"
+      synonyms: ["pharmacy type", "dispenser type", "pharmacy class"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["Retail Pharmacy", "Mail Order Pharmacy", "Specialty Pharmacy", "Long-term Care Pharmacy", "Clinic Pharmacy"]
+    
+    notes: "Key field for analyzing utilization by pharmacy channel"
+
+# Metric View Recommendations
+metric_view_suggestions:
+  
+  confidence_threshold: 0.70
+  status: "READY - Standard pharmacy dimension with clear fields"
+  
+  # Core fields for pharmacy claims analysis
+  recommended_dimensions:
+    - PharmacyName                      # Primary display name
+    - PharmacyNCPDPID                   # Standard pharmacy identifier
+    - PharmacyNPI                       # National Provider Identifier
+    - DispenserClassCodeDescription     # Pharmacy type (retail, mail, specialty)
+    - PharmacyGroup                     # Chain affiliation
+    - PharmacyCity                      # City
+    - PharmacyCounty                    # County
+    - PharmacyStateCode                 # State
+    - PharmacyPostalCode                # ZIP code
+  
+  # Supporting identifiers
+  additional_identifiers:
+    - PharmacyTaxIDNumber               # For organizational grouping
+    - PharmacyDEANumber                 # For controlled substance analysis
+  
+  # Optional address fields
+  optional_dimensions:
+    - PharmacyAddress                   # Street address
+    - PharmacyAddress2                  # Address line 2
+    - DispenserClassCode                # Code version of pharmacy type
+  
+  # Supporting field for joins only
+  join_keys:
+    - Pharmacy_Sk                       # For joining to pharmacy fact tables
+  
+  recommended_measures: []  # This is a dimension table, not a fact table
+  
+  recommended_filters: []
+  
+  sample_metric_view_yaml: |
+    version: 1.1
+    source: catalog.schema.dim_pharmacy
+    
+    dimensions:
+      - name: Pharmacy Name
+        expr: PharmacyName
+        display_name: 'Pharmacy Name'
+        synonyms: ['pharmacy', 'store', 'pharmacy name']
+        
+      - name: NCPDP ID
+        expr: PharmacyNCPDPID
+        display_name: 'NCPDP ID'
+        synonyms: ['NCPDP', 'pharmacy ID', 'pharmacy number']
+        
+      - name: Pharmacy Type
+        expr: DispenserClassCodeDescription
+        display_name: 'Pharmacy Type'
+        synonyms: ['pharmacy type', 'dispenser type', 'channel']
+        
+      - name: Pharmacy Chain
+        expr: PharmacyGroup
+        display_name: 'Pharmacy Chain'
+        synonyms: ['chain', 'pharmacy group', 'banner']
+        
+      - name: City
+        expr: PharmacyCity
+        display_name: 'Pharmacy City'
+        synonyms: ['city', 'pharmacy city']
+        
+      - name: State
+        expr: PharmacyStateCode
+        display_name: 'State'
+        synonyms: ['state', 'pharmacy state']
+        
+      - name: ZIP Code
+        expr: PharmacyPostalCode
+        display_name: 'ZIP Code'
+        synonyms: ['ZIP', 'postal code', 'ZIP code']
+        
+      - name: County
+        expr: PharmacyCounty
+        display_name: 'County'
+        synonyms: ['county', 'pharmacy county']
+  
+  usage_notes:
+    - "Standard pharmacy location dimension"
+    - "NCPDP ID is the primary standard identifier (7 digits)"
+    - "NPI is also standard but may not be unique if pharmacies share organization-level NPI"
+    - "When joining to pharmacy fact tables, use Pharmacy_Sk as foreign key"
+    - "DispenserClassCodeDescription categorizes pharmacy channels (retail, mail, specialty)"
+    - "PharmacyGroup identifies chain affiliation for network and pricing analysis"
+    - "Geographic fields (City, County, State, ZIP) support network adequacy and access analysis"
+    - "Tax ID groups pharmacies by parent organization for rebate and contract analysis"
+
+  common_use_cases:
+    - "Pharmacy network analysis - in-network vs out-of-network utilization"
+    - "Channel analysis - retail vs mail order vs specialty pharmacy"
+    - "Chain vs independent pharmacy utilization and cost comparison"
+    - "Geographic analysis - pharmacy distribution and member access by city/county/state"
+    - "Network adequacy - ensuring sufficient pharmacy coverage in all areas"
+    - "Pharmacy performance - metrics by individual pharmacy or pharmacy chain"
+    - "Controlled substance dispensing analysis (using DEA number)"
+    - "Mail order program utilization and cost savings"
+    - "Specialty pharmacy management and cost containment"
+
+# Review Summary
+review_summary:
+  reviewer: "Business User/SME"
+  review_date: "2026-02-09"
+  status: "COMPLETE"
+  
+  clarifications_received:
+    - "Standard pharmacy dimension with industry-standard identifiers"
+    - "All fields are well-defined and commonly used in pharmacy benefits"
+  
+  next_steps:
+    - "Ready to use in pharmacy metric view generation"
+    - "No additional clarification needed"

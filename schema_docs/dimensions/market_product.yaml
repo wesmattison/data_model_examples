@@ -1,0 +1,621 @@
+# MarketProduct Table Schema
+# Status: REVIEWED - SME Clarified
+# Created: 2026-02-09
+# Updated: 2026-02-09
+
+table:
+  name: catalog.schema.marketproduct  # TODO: Update with actual catalog.schema
+  type: dimension
+  description: "Insurance product dimension containing state (market), insurance program type, and product brand information. This table became a catch-all for various hierarchies over time, but end users primarily work with: state, program (Medicaid/Medicare/Marketplace), and product brand name."
+  grain: "One row per unique combination of market, program, and product"
+  source_system: "TODO: Identify source system"
+  refresh_frequency: "TODO: Specify refresh frequency"
+  
+  primary_key: [MarketProduct_SK]
+  
+  # Natural key is the combination of state + program + product
+  natural_key: [MarketCode, ProgramCode, ProductCode]
+  
+  data_quality_notes:
+    - "Table contains many legacy/unused fields from various hierarchies"
+    - "ProgramDesc has some known drift (~10 program types with variations)"
+    - "Only 4 fields actively used by end users: MarketDesc, MarketCode, ProgramDesc, ProductDesc"
+    - "Recommendation: Create simplified metric view exposing only the actively used fields"
+
+columns:
+  # Surrogate Key
+  - name: MarketProduct_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "System-generated surrogate key - use for joins only"
+    
+    genie:
+      description: "Unique system-generated identifier for each market-product combination"
+      synonyms: ["market product key", "market product ID"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: false
+      unique: true
+      primary_key: true
+
+  # Natural Keys / Business Identifiers
+  - name: ClientID
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: natural_key
+      reason: "Business identifier for client - useful for filtering and analysis"
+    
+    genie:
+      description: "NEEDS REVIEW: Client identifier - unclear if this refers to customer, account, or organizational unit"
+      synonyms: ["client", "client number", "account"]
+      confidence_score: 0.50
+      needs_review: true
+      review_notes: "Ambiguous - need to clarify what 'Client' means in business context"
+    
+    constraints:
+      nullable: true
+    
+    sample_values: []
+
+  - name: MarketCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "PRIMARY FIELD: State code (e.g., 'CA', 'TX', 'FL') - essential for geographic analysis"
+    
+    genie:
+      description: "Two-letter US state code representing the geographic market"
+      synonyms: ["state code", "state", "market", "state abbreviation"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: ["CA", "TX", "FL", "NY", "IL"]
+
+  - name: MarketDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "PRIMARY FIELD: State name (e.g., 'California', 'Texas') - primary display field for geographic analysis"
+    
+    genie:
+      description: "Full US state name for the market"
+      synonyms: ["state name", "state", "market name"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: ["California", "Texas", "Florida", "New York", "Illinois"]
+
+  - name: ProductCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Product code corresponding to ProductDesc - useful for filtering and joins"
+    
+    genie:
+      description: "Code/identifier for the insurance product brand (pairs with ProductDesc)"
+      synonyms: ["product", "product identifier", "product ID", "product code"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: []
+
+  - name: ProductDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "PRIMARY FIELD: Insurance product brand name - essential for product-level analysis"
+    
+    genie:
+      description: "Brand name of the insurance product offering (e.g., specific plan names or product lines marketed to customers)"
+      synonyms: ["product name", "product", "brand name", "plan name"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: []  # TODO: Add sample product brand names
+
+  - name: SubProductCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Sub-product identifier - useful for detailed product analysis"
+    
+    genie:
+      description: "Code representing a sub-category or variant of the product"
+      synonyms: ["sub-product", "product variant", "product sub-type"]
+      confidence_score: 0.75
+      needs_review: true
+      review_notes: "Need to clarify relationship to ProductCode - is this a variant, sub-category, or SKU-level detail?"
+    
+    constraints:
+      nullable: true
+
+  - name: SubProductDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Human-readable sub-product name"
+    
+    genie:
+      description: "Descriptive name for the sub-product code"
+      synonyms: ["sub-product name", "sub-product description"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: MarketSubProductCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Composite identifier combining market and sub-product"
+    
+    genie:
+      description: "NEEDS REVIEW: Composite code combining market and sub-product - unclear if this is concatenated or represents a separate classification"
+      synonyms: ["market sub-product", "market-product combination"]
+      confidence_score: 0.45
+      needs_review: true
+      review_notes: "Unclear purpose - is this MarketCode + SubProductCode concatenated, or a separate business identifier?"
+    
+    constraints:
+      nullable: true
+
+  # Hierarchical Group Fields (Parent → Group → Subgroup)
+  # NOTE: These fields are legacy/unused - not exposed to end users
+  - name: ParentGroupSyskey
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Legacy field - not used by end users"
+    
+    genie:
+      description: "System-generated identifier for parent group level - LEGACY/UNUSED"
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ParentGroupID
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Legacy field - not used by end users"
+    
+    genie:
+      description: "Parent group business identifier - LEGACY/UNUSED"
+      synonyms: ["parent group"]
+      confidence_score: 0.60
+      needs_review: false
+      review_notes: "Part of unused hierarchy - exclude from metric views"
+    
+    constraints:
+      nullable: true
+
+  - name: ParentGroupName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Legacy field - not used by end users"
+    
+    genie:
+      description: "Parent group name - LEGACY/UNUSED"
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: GroupSysKey
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Legacy field - not used by end users"
+    
+    genie:
+      description: "System-generated identifier for group level - LEGACY/UNUSED"
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: GroupID
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Legacy field - not used by end users"
+    
+    genie:
+      description: "Group business identifier - LEGACY/UNUSED"
+      confidence_score: 0.60
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: GroupName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Legacy field - not used by end users"
+    
+    genie:
+      description: "Group name - LEGACY/UNUSED"
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: SubgroupSysKey
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Legacy field - not used by end users"
+    
+    genie:
+      description: "System-generated identifier for subgroup level - LEGACY/UNUSED"
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: SubgroupID
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Legacy field - not used by end users"
+    
+    genie:
+      description: "Subgroup business identifier - LEGACY/UNUSED"
+      confidence_score: 0.60
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: SubgroupName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Legacy field - not used by end users"
+    
+    genie:
+      description: "Subgroup name - LEGACY/UNUSED"
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  # Program Hierarchy Fields
+  # NOTE: ProgramCode/ProgramDesc are PRIMARY FIELDS (updated above)
+  # SubProgram fields are legacy/unused
+  
+  - name: SubProgramCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Legacy field - not used by end users"
+    
+    genie:
+      description: "Sub-program code - LEGACY/UNUSED"
+      confidence_score: 0.50
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: SubProgramDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Legacy field - not used by end users"
+    
+    genie:
+      description: "Sub-program description - LEGACY/UNUSED"
+      confidence_score: 0.80
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  # Classification Fields
+  - name: ClassPlanID
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Classification plan identifier - may be important for analysis"
+    
+    genie:
+      description: "NEEDS REVIEW: Identifier for classification plan - unclear purpose and business meaning"
+      synonyms: ["class plan", "classification plan"]
+      confidence_score: 0.30
+      needs_review: true
+      review_notes: "Highly ambiguous - need SME input on what 'Class Plan' represents"
+    
+    constraints:
+      nullable: true
+
+  - name: ClassPlanDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Classification plan description"
+    
+    genie:
+      description: "Descriptive name for the classification plan"
+      confidence_score: 0.70
+      needs_review: true
+      review_notes: "Description may help clarify purpose once we have sample data"
+    
+    constraints:
+      nullable: true
+
+  - name: ProductID
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: natural_key
+      reason: "Appears to be another product identifier - need to clarify vs ProductCode"
+    
+    genie:
+      description: "NEEDS REVIEW: Product identifier - unclear how this differs from ProductCode"
+      synonyms: ["product ID"]
+      confidence_score: 0.40
+      needs_review: true
+      review_notes: "Critical - we have both ProductCode and ProductID. Are these the same? Different systems? Different levels?"
+    
+    constraints:
+      nullable: true
+
+  - name: PlanProductDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Product description in context of plan"
+    
+    genie:
+      description: "NEEDS REVIEW: Product description potentially related to ClassPlanID - unclear relationship"
+      synonyms: ["plan product description"]
+      confidence_score: 0.35
+      needs_review: true
+      review_notes: "Unclear how this relates to ProductDesc and ClassPlanDesc"
+    
+    constraints:
+      nullable: true
+
+  - name: ProductCategoryCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Product category code for grouping"
+    
+    genie:
+      description: "Code representing the product category"
+      synonyms: ["product category", "category code"]
+      confidence_score: 0.75
+      needs_review: true
+      review_notes: "Need to understand how category hierarchy relates to group hierarchy"
+    
+    constraints:
+      nullable: true
+
+  - name: ProductCategoryDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Product category description"
+    
+    genie:
+      description: "Descriptive name for the product category"
+      synonyms: ["product category name", "category description"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  # Age Range Fields
+  - name: MinAge
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Minimum age - potentially useful for age-based product segmentation"
+    
+    genie:
+      description: "NEEDS REVIEW: Minimum age value - unclear if this is customer age, product age rating, or other age-related attribute"
+      synonyms: ["minimum age", "min age", "age minimum"]
+      confidence_score: 0.45
+      needs_review: true
+      review_notes: "Context unclear - is this target customer age, product rating age, or something else?"
+    
+    constraints:
+      nullable: true
+    
+    sample_values: []
+
+  - name: MaxAge
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Maximum age - pairs with MinAge for age range analysis"
+    
+    genie:
+      description: "NEEDS REVIEW: Maximum age value - unclear context (see MinAge)"
+      synonyms: ["maximum age", "max age", "age maximum"]
+      confidence_score: 0.45
+      needs_review: true
+      review_notes: "Context unclear - pairs with MinAge to define age range"
+    
+    constraints:
+      nullable: true
+    
+    sample_values: []
+
+  # Indicator Field
+  - name: PFKIndicator
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Unknown purpose - exclude until clarified"
+    
+    genie:
+      description: "UNKNOWN: PFK Indicator - acronym meaning unclear, purpose unknown"
+      confidence_score: 0.10
+      needs_review: true
+      review_notes: "Highly ambiguous acronym - need to determine what PFK stands for and what this field indicates"
+    
+    constraints:
+      nullable: true
+    
+    analysis_notes:
+      distinct_value_count: null
+      null_percentage: null
+      most_common_values: []
+      investigation_needed: "Get sample values and ask SME about PFK meaning"
+
+# Metric View Recommendations
+metric_view_suggestions:
+  
+  confidence_threshold: 0.70
+  
+  status: "READY - Primary fields identified and documented"
+  
+  # Only expose the 4 fields actually used by end users
+  recommended_dimensions:
+    - MarketCode          # State code (CA, TX, etc.)
+    - MarketDesc          # State name (California, Texas, etc.)
+    - ProgramDesc         # Insurance program (Medicaid, Medicare, Marketplace, etc.)
+    - ProductDesc         # Product brand name
+  
+  # Optional supporting fields
+  optional_dimensions:
+    - ProductCode         # If code-based filtering is needed
+    - MarketProduct_SK    # Only for joins to fact tables
+  
+  recommended_measures: []  # This is a dimension table, not a fact table
+  
+  recommended_filters: []
+  
+  sample_metric_view_yaml: |
+    version: 1.1
+    source: catalog.schema.marketproduct
+    
+    dimensions:
+      - name: State
+        expr: MarketDesc
+        display_name: 'State'
+        synonyms: ['state name', 'market']
+        
+      - name: State Code
+        expr: MarketCode
+        display_name: 'State Code'
+        synonyms: ['state code', 'state abbreviation']
+        
+      - name: Insurance Program
+        expr: ProgramDesc
+        display_name: 'Insurance Program'
+        synonyms: ['program', 'program type', 'insurance type']
+        
+      - name: Product
+        expr: ProductDesc
+        display_name: 'Product Brand'
+        synonyms: ['product name', 'brand', 'plan name']
+  
+  usage_notes:
+    - "This table contains many legacy fields that should NOT be exposed in metric views"
+    - "End users only work with: State (MarketDesc/MarketCode), Program (ProgramDesc), and Product (ProductDesc)"
+    - "When joining to fact tables, use MarketProduct_SK as the foreign key"
+    - "ProgramDesc has known drift - consider CASE statement to standardize in metric view if needed"
+
+# Review Summary
+review_summary:
+  reviewer: "Business User/SME"
+  review_date: "2026-02-09"
+  status: "COMPLETE"
+  
+  clarifications_received:
+    - "MarketDesc/MarketCode = US State names and codes"
+    - "ProgramDesc = Insurance program type (Medicaid, Medicare, Marketplace, ~10 types total)"
+    - "ProductDesc = Insurance product brand names"
+    - "All other hierarchical fields (Group, Subgroup, SubProgram, ClassPlan, etc.) are legacy/unused"
+  
+  next_steps:
+    - "Use this schema to generate simplified metric views"
+    - "Consider data quality project to standardize ProgramDesc drift"
+    - "Document that only 4 fields should be exposed to end users"

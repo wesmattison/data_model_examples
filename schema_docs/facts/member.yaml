@@ -1,0 +1,829 @@
+# Member Dimension Table Schema
+# Status: REVIEWED - Member demographic dimension
+# Created: 2026-02-09
+
+table:
+  name: catalog.schema.fact_member  # TODO: Update with actual catalog.schema (note: named fact_member but is actually a dimension)
+  type: dimension
+  description: "Member demographic dimension containing member identifiers, demographic attributes, and contact information. One row per unique member. IMPORTANT: PII and contact information (addresses, phone, email) are excluded from metric views to protect member privacy."
+  grain: "One row per unique member"
+  source_system: "TODO: Identify source system"
+  refresh_frequency: "TODO: Specify refresh frequency"
+  
+  primary_key: [Member_SK]
+  
+  # Natural keys for member identification
+  natural_key: [SubscriberID, MemberIDSuffixNumber]
+  
+  data_quality_notes:
+    - "Contains member PII - address, phone, email MUST be excluded from metric views"
+    - "Multiple identifier systems: SubscriberID, MedicaidID, MedicareID, Unique Health ID"
+    - "Member demographics: name, DOB, gender, ethnicity, language"
+    - "GroupSysKey may link to family/household grouping"
+
+columns:
+  # Primary Key
+  - name: Member_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "PRIMARY KEY: Unique member identifier - use for joins only"
+    
+    genie:
+      description: "Unique system-generated identifier for each member"
+      synonyms: ["member key"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+      unique: true
+      primary_key: true
+
+  - name: MemberSysKey
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "System key - internal use only"
+    
+    genie:
+      description: "System-generated member key - legacy or internal identifier"
+      confidence_score: 0.80
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  # Member Identifiers (Natural Keys)
+  - name: Subscriber_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "Subscriber surrogate key - may link to subscriber/policyholder dimension"
+    
+    genie:
+      description: "Surrogate key for subscriber/policyholder - links member to their subscriber (primary policy holder)"
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: SubscriberID
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: natural_key
+      reason: "Subscriber ID - primary member identifier, safe to expose"
+    
+    genie:
+      description: "Subscriber ID - primary member/policyholder identifier used in claims and enrollment systems"
+      synonyms: ["subscriber ID", "member ID", "policy number"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: ["SUB123456", "SUB789012"]
+
+  - name: SubscriberIDMemberIDSuffixNumber
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: natural_key
+      reason: "Combined subscriber+member ID - complete member identifier"
+    
+    genie:
+      description: "Combined identifier: Subscriber ID + Member Suffix (e.g., SUB123456-01). Uniquely identifies member including dependents under same subscriber."
+      synonyms: ["member ID", "full member ID"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["SUB123456-00", "SUB123456-01", "SUB789012-00"]
+    
+    notes: "Suffix -00 typically indicates subscriber/policyholder, -01, -02, etc. indicate dependents"
+
+  - name: MemberIDSuffixNumber
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Member suffix - distinguishes subscriber from dependents"
+    
+    genie:
+      description: "Member ID suffix number (0=subscriber/policyholder, 1-99=dependents). Identifies relationship to subscriber."
+      synonyms: ["member suffix", "dependent number", "person code"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: [0, 1, 2, 3]
+    
+    notes: "0 or 00 = subscriber (primary policyholder), 1+ = dependents"
+
+  - name: MemberSubscriberRelationshipCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Relationship to subscriber - useful for family analysis"
+    
+    genie:
+      description: "Code indicating member's relationship to subscriber (e.g., '01'=Self/Subscriber, '02'=Spouse, '03'=Child)"
+      synonyms: ["relationship code", "dependent relationship"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["01", "02", "03", "19"]
+    
+    notes: "Standard codes: 01=Self, 02=Spouse, 03=Child, 19=Other"
+
+  - name: SubscriberMedicaidID
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: natural_key
+      reason: "Medicaid ID - important for Medicaid program analysis"
+    
+    genie:
+      description: "State Medicaid identifier for the subscriber/member"
+      synonyms: ["Medicaid ID", "Medicaid number"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: []
+
+  - name: SubscriberMedicareID
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: natural_key
+      reason: "Medicare ID - important for Medicare program analysis"
+    
+    genie:
+      description: "Medicare Health Insurance Claim Number (HICN) or MBI (Medicare Beneficiary Identifier) for the subscriber/member"
+      synonyms: ["Medicare ID", "Medicare number", "HICN", "MBI"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: []
+    
+    notes: "May be legacy HICN or newer MBI format"
+
+  - name: MemberStandardUniqueHealthID
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: natural_key
+      reason: "Standardized health ID - may be used for data exchange"
+    
+    genie:
+      description: "Standardized unique health identifier - may be enterprise member ID or state-specific identifier"
+      synonyms: ["unique health ID", "enterprise member ID"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  # Member Demographics - Name
+  - name: MemberName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "PII: Full member name - do not expose in metric views"
+    
+    genie:
+      description: "Full member name - PROTECTED PII, not for metric view exposure"
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    notes: "PII - exclude from all metric views and reports"
+
+  - name: MemberFirstName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "PII: Member first name - do not expose in metric views"
+    
+    genie:
+      description: "Member first name - PROTECTED PII, not for metric view exposure"
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    notes: "PII - exclude from all metric views and reports"
+
+  - name: MemberMiddleInitial
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "PII: Member middle initial - do not expose in metric views"
+    
+    genie:
+      description: "Member middle initial - PROTECTED PII, not for metric view exposure"
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    notes: "PII - exclude from all metric views and reports"
+
+  - name: MemberLastName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "PII: Member last name - do not expose in metric views"
+    
+    genie:
+      description: "Member last name - PROTECTED PII, not for metric view exposure"
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    notes: "PII - exclude from all metric views and reports"
+
+  # Member Demographics - DOB and Gender
+  - name: MemberBirthDate
+    data_type: date
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Date of birth - useful for age calculation and age-based analysis"
+    
+    genie:
+      description: "Member date of birth - used to calculate member age and age groups"
+      synonyms: ["DOB", "birth date", "date of birth"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["1980-05-15", "1965-12-01", "2010-03-22"]
+    
+    notes: "Use to derive age at time of service or reporting period"
+
+  - name: MemberGenderCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Gender code - important demographic for analysis"
+    
+    genie:
+      description: "Member gender code (e.g., 'M'=Male, 'F'=Female, 'U'=Unknown)"
+      synonyms: ["gender", "sex"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["M", "F", "U"]
+
+  # Contact Information - ALL EXCLUDED FROM METRIC VIEWS
+  - name: MemberAddress
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "PII/CONTACT: Street address - NEVER expose in metric views"
+    
+    genie:
+      description: "Member street address - PROTECTED PII, not for metric view exposure"
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    notes: "PII/CONTACT INFO - NEVER expose in metric views or reports"
+
+  - name: MemberAddress2
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "PII/CONTACT: Street address line 2 - NEVER expose in metric views"
+    
+    genie:
+      description: "Member street address line 2 - PROTECTED PII, not for metric view exposure"
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    notes: "PII/CONTACT INFO - NEVER expose in metric views or reports"
+
+  - name: PhoneNumber
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "PII/CONTACT: Phone number - NEVER expose in metric views"
+    
+    genie:
+      description: "Member phone number - PROTECTED PII, not for metric view exposure"
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    notes: "PII/CONTACT INFO - NEVER expose in metric views or reports"
+
+  - name: PhoneNumberExt
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "PII/CONTACT: Phone extension - NEVER expose in metric views"
+    
+    genie:
+      description: "Phone number extension - PROTECTED PII, not for metric view exposure"
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    notes: "PII/CONTACT INFO - NEVER expose in metric views or reports"
+
+  - name: MemberEmailAddress
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "PII/CONTACT: Email address - NEVER expose in metric views"
+    
+    genie:
+      description: "Member email address - PROTECTED PII, not for metric view exposure"
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    notes: "PII/CONTACT INFO - NEVER expose in metric views or reports"
+
+  # Geographic Information - OK to expose at aggregate level
+  - name: MemberCity
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "City - safe for geographic analysis at city level"
+    
+    genie:
+      description: "Member city of residence - used for geographic analysis"
+      synonyms: ["city", "member city"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["Columbus", "Cleveland", "Cincinnati"]
+
+  - name: MemberState
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "State - safe for geographic analysis"
+    
+    genie:
+      description: "Member state of residence - two-letter state code"
+      synonyms: ["state", "member state"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["OH", "CA", "TX", "FL"]
+
+  - name: MemberZip
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "ZIP code - safe for geographic analysis (3-digit ZIP may be safer for small populations)"
+    
+    genie:
+      description: "Member ZIP code - used for geographic analysis. Consider using 3-digit ZIP for smaller populations to protect privacy."
+      synonyms: ["ZIP", "ZIP code", "postal code"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["43215", "90210", "10001"]
+    
+    notes: "Full 5-digit ZIP generally safe; consider 3-digit ZIP for very small member populations"
+
+  - name: MemberCountyName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "County - safe for geographic analysis"
+    
+    genie:
+      description: "Member county of residence"
+      synonyms: ["county", "member county"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["Franklin County", "Cuyahoga County", "Hamilton County"]
+
+  # Ethnicity and Language
+  - name: MemberEthnicityCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Ethnicity code - important for health equity analysis"
+    
+    genie:
+      description: "Member ethnicity code (e.g., Hispanic/Latino classification)"
+      synonyms: ["ethnicity", "ethnicity code"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: []
+
+  - name: MemberEthnicity
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Ethnicity description - important for health equity analysis"
+    
+    genie:
+      description: "Member ethnicity description (e.g., 'Hispanic or Latino', 'Not Hispanic or Latino')"
+      synonyms: ["ethnicity"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["Hispanic or Latino", "Not Hispanic or Latino", "Unknown"]
+
+  - name: MemberLanguageCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Language code - useful for language access analysis"
+    
+    genie:
+      description: "Member preferred language code (e.g., 'EN'=English, 'ES'=Spanish)"
+      synonyms: ["language code", "language preference"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["EN", "ES", "ZH", "VI"]
+
+  - name: MemberLanguageDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Language description - useful for language access analysis"
+    
+    genie:
+      description: "Member preferred language description (e.g., 'English', 'Spanish', 'Chinese', 'Vietnamese')"
+      synonyms: ["language", "preferred language"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["English", "Spanish", "Chinese", "Vietnamese", "Arabic"]
+
+  # Member Status
+  - name: MemberStatusCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Status code - indicates active/inactive/termed status"
+    
+    genie:
+      description: "Member enrollment status code (e.g., 'A'=Active, 'T'=Terminated, 'P'=Pending)"
+      synonyms: ["status code", "enrollment status"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["A", "T", "P", "I"]
+
+  - name: MemberStatusDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Status description - indicates active/inactive/termed status"
+    
+    genie:
+      description: "Member enrollment status description (e.g., 'Active', 'Terminated', 'Pending', 'Inactive')"
+      synonyms: ["status", "enrollment status"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["Active", "Terminated", "Pending", "Inactive"]
+
+  - name: MemberAgreementEffectiveDate
+    data_type: date
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Agreement effective date - first enrollment date, useful for tenure analysis"
+    
+    genie:
+      description: "Date when member agreement became effective - typically the member's initial enrollment date"
+      synonyms: ["effective date", "enrollment date", "start date"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["2020-01-01", "2022-06-15", "2023-03-01"]
+
+  # Family/Group Information
+  - name: FamilyMemberCaseNbr
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Family case number - useful for family-level analysis"
+    
+    genie:
+      description: "Family or case number - groups members in the same family/household for Medicaid or social services"
+      synonyms: ["family ID", "case number", "household ID"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: GroupSysKey
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "System key for grouping - internal use"
+    
+    genie:
+      description: "System key for member grouping - may link to family or subscriber group"
+      confidence_score: 0.70
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+# Metric View Recommendations
+metric_view_suggestions:
+  
+  confidence_threshold: 0.70
+  status: "READY - Demographics identified, PII/contact info strictly excluded"
+  
+  # Safe demographic fields for metric views
+  recommended_dimensions:
+    - SubscriberID                        # Primary member ID (safe)
+    - SubscriberIDMemberIDSuffixNumber    # Full member ID with suffix
+    - MemberIDSuffixNumber                # Dependent suffix (0=subscriber, 1+=dependent)
+    - MemberSubscriberRelationshipCode    # Relationship to subscriber
+    - SubscriberMedicaidID                # Medicaid ID (when applicable)
+    - SubscriberMedicareID                # Medicare ID (when applicable)
+    - MemberBirthDate                     # DOB for age calculation
+    - MemberGenderCode                    # Gender
+    - MemberCity                          # City (geographic analysis)
+    - MemberState                         # State (geographic analysis)
+    - MemberZip                           # ZIP code (geographic analysis)
+    - MemberCountyName                    # County (geographic analysis)
+    - MemberEthnicity                     # Ethnicity (health equity)
+    - MemberLanguageDesc                  # Preferred language
+    - MemberStatusDesc                    # Enrollment status
+    - MemberAgreementEffectiveDate        # Initial enrollment date
+  
+  # STRICTLY EXCLUDED - PII/Contact Information
+  pii_excluded_fields:
+    - MemberName                          # PII - Full name
+    - MemberFirstName                     # PII - First name
+    - MemberMiddleInitial                 # PII - Middle initial
+    - MemberLastName                      # PII - Last name
+    - MemberAddress                       # PII/CONTACT - Street address
+    - MemberAddress2                      # PII/CONTACT - Address line 2
+    - PhoneNumber                         # PII/CONTACT - Phone number
+    - PhoneNumberExt                      # PII/CONTACT - Phone extension
+    - MemberEmailAddress                  # PII/CONTACT - Email address
+  
+  # Supporting fields for joins only
+  join_keys:
+    - Member_SK                           # Primary key for joins
+    - Subscriber_SK                       # Subscriber relationship
+  
+  recommended_measures: []  # This is a dimension table, not a fact table
+  
+  recommended_filters: []
+  
+  sample_metric_view_yaml: |
+    version: 1.1
+    source: catalog.schema.fact_member
+    
+    dimensions:
+      - name: Member ID
+        expr: SubscriberIDMemberIDSuffixNumber
+        display_name: 'Member ID'
+        synonyms: ['member ID', 'member number', 'subscriber ID']
+        
+      - name: Relationship
+        expr: MemberSubscriberRelationshipCode
+        display_name: 'Relationship to Subscriber'
+        synonyms: ['relationship', 'dependent relationship']
+        
+      - name: Gender
+        expr: MemberGenderCode
+        display_name: 'Gender'
+        synonyms: ['gender', 'sex']
+        
+      - name: Birth Date
+        expr: MemberBirthDate
+        display_name: 'Date of Birth'
+        synonyms: ['DOB', 'birth date', 'date of birth']
+        format:
+          type: date
+          date_format: year_month_day
+        
+      - name: City
+        expr: MemberCity
+        display_name: 'City'
+        synonyms: ['city', 'member city', 'residence city']
+        
+      - name: State
+        expr: MemberState
+        display_name: 'State'
+        synonyms: ['state', 'member state']
+        
+      - name: County
+        expr: MemberCountyName
+        display_name: 'County'
+        synonyms: ['county']
+        
+      - name: ZIP Code
+        expr: MemberZip
+        display_name: 'ZIP Code'
+        synonyms: ['ZIP', 'postal code']
+        
+      - name: Ethnicity
+        expr: MemberEthnicity
+        display_name: 'Ethnicity'
+        synonyms: ['ethnicity', 'ethnic group']
+        
+      - name: Language
+        expr: MemberLanguageDesc
+        display_name: 'Preferred Language'
+        synonyms: ['language', 'preferred language']
+        
+      - name: Status
+        expr: MemberStatusDesc
+        display_name: 'Enrollment Status'
+        synonyms: ['status', 'member status']
+        
+      - name: Enrollment Date
+        expr: MemberAgreementEffectiveDate
+        display_name: 'Initial Enrollment Date'
+        synonyms: ['enrollment date', 'effective date', 'start date']
+        format:
+          type: date
+          date_format: year_month_day
+  
+  usage_notes:
+    - "CRITICAL: Never expose PII or contact information (names, addresses, phone, email)"
+    - "Member_SK is used for joins to fact tables"
+    - "SubscriberID + MemberIDSuffixNumber uniquely identifies each member"
+    - "MemberIDSuffixNumber: 0=subscriber, 1+=dependents"
+    - "Use MemberBirthDate to derive age at time of analysis"
+    - "Geographic fields (City, State, County, ZIP) are safe for aggregate analysis"
+    - "Consider 3-digit ZIP codes for very small member populations to protect privacy"
+    - "Ethnicity and Language support health equity and access analysis"
+    - "MemberAgreementEffectiveDate is the initial enrollment date (not current period)"
+
+  common_use_cases:
+    - "Member demographics analysis (age, gender, geography)"
+    - "Health equity analysis (ethnicity, language, geography)"
+    - "Family/household analysis (FamilyMemberCaseNbr, relationship codes)"
+    - "Member tenure analysis (enrollment date)"
+    - "Language access needs (preferred language)"
+    - "Geographic distribution (state, county, city, ZIP)"
+    - "Active vs terminated member status"
+
+  privacy_warnings:
+    - "NEVER expose member names in any form (full, first, middle, last)"
+    - "NEVER expose contact information (address, phone, email)"
+    - "Be cautious with very specific geographic combinations that could identify individuals"
+    - "When combining with other dimensions, ensure aggregate counts prevent re-identification"
+    - "Consider minimum cell size policies (e.g., suppress counts <10) when exposing detailed demographics"
+
+# Review Summary
+review_summary:
+  reviewer: "Business User/SME"
+  review_date: "2026-02-09"
+  status: "COMPLETE"
+  
+  clarifications_received:
+    - "CRITICAL: Do NOT expose addresses, phone numbers, emails, or member names in metric views"
+    - "Safe to expose: member IDs, demographics (DOB, gender), geography (city/state/county/ZIP)"
+    - "Safe to expose: ethnicity, language, enrollment dates, status"
+    - "Table is named fact_member but is actually a dimension table"
+  
+  next_steps:
+    - "Ready to use in metric view generation with strict PII exclusions"
+    - "Ensure any metric views follow minimum cell size policies for privacy protection"
+    - "Consider 3-digit ZIP aggregation for small populations"

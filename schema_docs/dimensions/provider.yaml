@@ -1,0 +1,300 @@
+# Provider Table Schema
+# Status: REVIEWED - Fields are self-explanatory
+# Created: 2026-02-09
+
+table:
+  name: catalog.schema.provider  # TODO: Update with actual catalog.schema
+  type: dimension
+  description: "Healthcare provider dimension containing provider identifiers, names, tax information, and specialty classifications. Used to identify and categorize healthcare providers (doctors, hospitals, clinics, etc.) in insurance claims and member data."
+  grain: "One row per unique provider"
+  source_system: "TODO: Identify source system"
+  refresh_frequency: "TODO: Specify refresh frequency"
+  
+  primary_key: [Provider_SK]
+  
+  # Natural key is likely the NPI or Federal Tax ID
+  natural_key: [ProviderNPI]  # NPI is the standard national provider identifier
+  
+  data_quality_notes:
+    - "All fields are well-named and self-explanatory"
+    - "ProviderNPI is the National Provider Identifier - standard healthcare identifier"
+    - "Provider may have primary and secondary specialties"
+
+columns:
+  # Surrogate Key
+  - name: Provider_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "System-generated surrogate key - use for joins to fact tables only"
+    
+    genie:
+      description: "Unique system-generated identifier for each provider"
+      synonyms: ["provider key", "provider ID"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+      unique: true
+      primary_key: true
+
+  # Natural Keys and Primary Identifiers
+  - name: ProviderNPI
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: natural_key
+      reason: "National Provider Identifier - standard healthcare provider identifier used nationally"
+    
+    genie:
+      description: "National Provider Identifier (NPI) - a unique 10-digit identification number issued by CMS to healthcare providers in the United States"
+      synonyms: ["NPI", "provider NPI", "national provider identifier", "provider number"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+      unique: true
+    
+    sample_values: ["1234567890", "9876543210"]
+    
+    notes: "Standard format is 10 digits. Required for HIPAA-covered healthcare providers."
+
+  - name: ProviderFederalTaxID
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: natural_key
+      reason: "Federal Tax ID (EIN) - useful for provider organization identification and grouping"
+    
+    genie:
+      description: "Federal Employer Identification Number (EIN/TIN) for the provider organization"
+      synonyms: ["tax ID", "EIN", "TIN", "federal tax ID", "employer ID"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["12-3456789", "98-7654321"]
+    
+    notes: "Format is typically XX-XXXXXXX. Used to identify the provider's organization for tax purposes."
+
+  - name: ProviderTaxID
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: natural_key
+      reason: "Provider tax identifier - may be individual or organizational"
+    
+    genie:
+      description: "Provider Tax Identification Number - may be individual provider SSN or organizational EIN depending on provider type"
+      synonyms: ["tax ID", "provider tax number", "TIN"]
+      confidence_score: 0.95
+      needs_review: false
+      review_notes: "Similar to ProviderFederalTaxID - may need clarification if these are the same or different use cases"
+    
+    constraints:
+      nullable: true
+    
+    sample_values: []
+
+  # Display Names and Descriptions
+  - name: ProviderName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Primary display name for provider - essential for user-facing reports"
+    
+    genie:
+      description: "Provider name (individual doctor name or facility/organization name)"
+      synonyms: ["provider", "provider name", "doctor name", "facility name"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["Dr. John Smith", "ABC Medical Center", "XYZ Hospital"]
+
+  - name: ProviderTaxIDName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Legal name associated with the provider's tax ID - useful for organizational grouping"
+    
+    genie:
+      description: "Legal business name associated with the provider's Tax ID (often the organization or practice name)"
+      synonyms: ["tax ID name", "legal name", "organization name", "practice name"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["Smith Medical Group LLC", "ABC Healthcare System"]
+
+  # Provider Type and Specialties
+  - name: ProviderTypeDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Provider type classification - important for analyzing provider mix and network composition"
+    
+    genie:
+      description: "Type or category of provider (e.g., Individual, Organization, Hospital, Clinic, Pharmacy)"
+      synonyms: ["provider type", "provider category", "entity type"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["Individual", "Organization", "Hospital", "Group Practice", "Pharmacy"]
+
+  - name: ProviderSpecialtyDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Primary specialty - critical for provider network analysis, utilization reporting, and specialty mix"
+    
+    genie:
+      description: "Primary medical specialty of the provider (e.g., Cardiology, Pediatrics, Family Medicine, Orthopedic Surgery)"
+      synonyms: ["specialty", "provider specialty", "medical specialty", "primary specialty"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["Family Medicine", "Cardiology", "Orthopedic Surgery", "Pediatrics", "Internal Medicine"]
+
+  - name: ProviderSecondarySpecialtyDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Secondary specialty - useful for providers with multiple specialties"
+    
+    genie:
+      description: "Secondary or additional medical specialty of the provider"
+      synonyms: ["secondary specialty", "additional specialty"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["Sports Medicine", "Geriatrics", "Pain Management"]
+
+# Metric View Recommendations
+metric_view_suggestions:
+  
+  confidence_threshold: 0.70
+  status: "READY - All fields are well-defined and commonly used"
+  
+  # All fields are suitable for metric view exposure
+  recommended_dimensions:
+    - ProviderName              # Primary display name
+    - ProviderNPI               # Standard national identifier
+    - ProviderTypeDesc          # Provider category
+    - ProviderSpecialtyDesc     # Primary specialty
+    - ProviderSecondarySpecialtyDesc  # Secondary specialty (if applicable)
+    - ProviderTaxIDName         # Organization/practice name
+    - ProviderFederalTaxID      # For organizational grouping
+  
+  # Optional dimensions (depending on use case)
+  optional_dimensions:
+    - ProviderTaxID             # May duplicate ProviderFederalTaxID
+  
+  # Supporting field for joins only
+  join_keys:
+    - Provider_SK               # For joining to fact tables
+  
+  recommended_measures: []  # This is a dimension table, not a fact table
+  
+  recommended_filters: []
+  
+  sample_metric_view_yaml: |
+    version: 1.1
+    source: catalog.schema.provider
+    
+    dimensions:
+      - name: Provider Name
+        expr: ProviderName
+        display_name: 'Provider Name'
+        synonyms: ['provider', 'doctor', 'facility']
+        
+      - name: Provider NPI
+        expr: ProviderNPI
+        display_name: 'NPI'
+        synonyms: ['NPI', 'national provider identifier', 'provider number']
+        
+      - name: Provider Type
+        expr: ProviderTypeDesc
+        display_name: 'Provider Type'
+        synonyms: ['provider type', 'entity type', 'provider category']
+        
+      - name: Primary Specialty
+        expr: ProviderSpecialtyDesc
+        display_name: 'Primary Specialty'
+        synonyms: ['specialty', 'medical specialty', 'provider specialty']
+        
+      - name: Secondary Specialty
+        expr: ProviderSecondarySpecialtyDesc
+        display_name: 'Secondary Specialty'
+        synonyms: ['secondary specialty', 'additional specialty']
+        
+      - name: Practice Name
+        expr: ProviderTaxIDName
+        display_name: 'Practice/Organization Name'
+        synonyms: ['practice', 'organization', 'group name']
+        
+      - name: Federal Tax ID
+        expr: ProviderFederalTaxID
+        display_name: 'Federal Tax ID'
+        synonyms: ['tax ID', 'EIN', 'TIN']
+  
+  usage_notes:
+    - "All fields in this table are well-named and self-explanatory"
+    - "ProviderNPI is the standard national identifier and should be used as the primary natural key"
+    - "When joining to fact tables (claims, encounters, etc.), use Provider_SK as the foreign key"
+    - "Provider may have both primary and secondary specialties"
+    - "ProviderTaxIDName often represents the practice or organization name, while ProviderName is the individual or facility"
+    - "Consider grouping providers by ProviderFederalTaxID to analyze at the organization/practice level"
+
+  common_use_cases:
+    - "Provider network analysis - which providers are in-network vs out-of-network"
+    - "Specialty mix reporting - distribution of claims/visits by specialty"
+    - "Provider utilization - top providers by claims volume, cost, or member count"
+    - "Network adequacy - ensuring sufficient providers of each specialty in each market"
+    - "Provider performance metrics - quality scores, patient satisfaction by provider"
+
+# Review Summary
+review_summary:
+  reviewer: "Business User/SME"
+  review_date: "2026-02-09"
+  status: "COMPLETE"
+  
+  clarifications_received:
+    - "All fields are self-explanatory and commonly understood in healthcare context"
+    - "This is a standard provider dimension with industry-standard fields"
+  
+  next_steps:
+    - "Ready to use in metric view generation"
+    - "No additional clarification needed"

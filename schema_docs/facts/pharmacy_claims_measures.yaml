@@ -1,0 +1,460 @@
+# Pharmacy Claims Measures Reference
+# Status: PRODUCTION - Measures currently in use
+# Created: 2026-02-09
+
+# This document captures the existing pharmacy measures being used in production
+# These can be incorporated into metric views or used as reference for new measure development
+
+measures:
+  # Cost/Financial Measures
+  - name: Admin Fee Amount
+    dax_expression: sum(fact_pharmacy[PaidProfessionalServiceFeeAmount])
+    description: "Total professional service fees paid (admin/vaccine fees, counseling, etc.)"
+    format:
+      type: currency
+      pattern: "$#,0"
+    source_field: PaidProfessionalServiceFeeAmount
+    measure_type: sum_aggregation
+    
+  - name: ARx
+    dax_expression: SUM(fact_pharmacy[ARX])
+    description: "Sum of ARX field - purpose needs clarification"
+    format:
+      type: number
+      pattern: "#,0"
+    source_field: ARX
+    measure_type: sum_aggregation
+    notes: "Field purpose unclear - may be authorization-related"
+    
+  - name: Days Supply
+    dax_expression: sum(fact_pharmacy[DrugDaySupplyCount])
+    description: "Total days of medication supplied across all prescriptions"
+    format:
+      type: number
+      pattern: "#,0"
+    source_field: DrugDaySupplyCount
+    measure_type: sum_aggregation
+    business_use: "Utilization metric; used for adherence calculations (PDC, MPR)"
+    
+  - name: Drug Quantity
+    dax_expression: sum(fact_pharmacy[DrugMetricQuantity])
+    description: "Total drug quantity in metric units"
+    format:
+      type: number
+      pattern: "#,0"
+    source_field: DrugMetricQuantity
+    measure_type: sum_aggregation
+    
+  - name: Invoiced Amount
+    dax_expression: sum(fact_pharmacy[InvoicedAmount])
+    description: "Total amount invoiced/billed by pharmacies"
+    format:
+      type: currency
+      pattern: "\$#,0;(\$#,0);\$#,0"
+    source_field: InvoicedAmount
+    measure_type: sum_aggregation
+    notes: "Format includes negative number handling"
+    
+  - name: Invoiced Per Member
+    dax_expression: DIVIDE([Invoiced Amount],[Total Members],0)
+    description: "Average invoiced amount per member (PMPM basis)"
+    format:
+      type: currency
+      pattern: "\$#,0;(\$#,0);\$#,0"
+    measure_type: calculated_ratio
+    depends_on:
+      - Invoiced Amount
+      - Total Members
+    business_use: "Per-member cost metric"
+    
+  - name: Invoiced Per Script
+    dax_expression: DIVIDE([Invoiced Amount],[Script Count],0)
+    description: "Average invoiced amount per prescription"
+    format:
+      type: currency
+      pattern: "\$#,0;(\$#,0);\$#,0"
+    measure_type: calculated_ratio
+    depends_on:
+      - Invoiced Amount
+      - Script Count
+    business_use: "Per-prescription cost metric"
+    
+  - name: Invoiced Per Utilizer
+    dax_expression: DIVIDE([Invoiced Amount],[Utilizing Members],0)
+    description: "Average invoiced amount per member who filled at least one prescription"
+    format:
+      type: currency
+      pattern: "\$#,0;(\$#,0);\$#,0"
+    measure_type: calculated_ratio
+    depends_on:
+      - Invoiced Amount
+      - Utilizing Members
+    business_use: "Cost per utilizing member (excludes non-utilizers)"
+    
+  - name: Quantity Per Script
+    dax_expression: DIVIDE([Drug Quantity],[Script Count],0)
+    description: "Average drug quantity per prescription"
+    format:
+      type: number
+      pattern: "#,0.00"
+    measure_type: calculated_ratio
+    depends_on:
+      - Drug Quantity
+      - Script Count
+      
+  # Count Measures
+  - name: Script Count
+    dax_expression: count(fact_pharmacy[PharmFactClaimID])
+    description: "Total count of pharmacy claims (prescription fills)"
+    format:
+      type: number
+    source_field: PharmFactClaimID
+    measure_type: count
+    business_use: "Core utilization metric - total prescriptions filled"
+    notes: "Should filter out reversals: RxClaimReversalFlag = 0"
+    
+  - name: Scripts Per 1000
+    dax_expression: "[Scripts Per Member] * 1000"
+    description: "Scripts per 1,000 members (industry standard metric)"
+    format:
+      type: number
+    measure_type: calculated_ratio
+    depends_on:
+      - Scripts Per Member
+    business_use: "Industry benchmark metric"
+    
+  - name: Scripts Per Member
+    dax_expression: DIVIDE([Script Count], [Total Members],0)
+    description: "Average scripts per member (PMPM utilization)"
+    format:
+      type: number
+    measure_type: calculated_ratio
+    depends_on:
+      - Script Count
+      - Total Members
+    business_use: "Utilization rate per member"
+    
+  - name: Scripts Per Utilizer
+    dax_expression: DIVIDE([Script Count], [Utilizing Members],0)
+    description: "Average scripts per member who filled at least one prescription"
+    format:
+      type: number
+    measure_type: calculated_ratio
+    depends_on:
+      - Script Count
+      - Utilizing Members
+    business_use: "Utilization rate among members with pharmacy activity"
+    
+  - name: Total Members
+    dax_expression: count(fact_membermonth_detail[Member_SK])
+    description: "Total distinct member count"
+    format:
+      type: number
+    source_table: fact_membermonth_detail
+    source_field: Member_SK
+    measure_type: count
+    notes: "Likely from member month table for enrollment denominator"
+    
+  - name: Units Per Day
+    dax_expression: DIVIDE([Drug Quantity],[Days Supply],0)
+    description: "Average units dispensed per day of supply"
+    format:
+      type: number
+      pattern: "#,0.00"
+    measure_type: calculated_ratio
+    depends_on:
+      - Drug Quantity
+      - Days Supply
+    business_use: "Dosing metric - units per day"
+    
+  - name: Utilizing Members
+    dax_expression: DISTINCTCOUNT(fact_pharmacy[Member_SK])
+    description: "Count of unique members who filled at least one prescription"
+    format:
+      type: number
+    source_field: Member_SK
+    measure_type: distinct_count
+    business_use: "Pharmacy utilization rate denominator"
+
+# Measure Categories
+measure_categories:
+  
+  cost_measures:
+    description: "Financial/cost measures for pharmacy spending analysis"
+    measures:
+      - Admin Fee Amount
+      - Invoiced Amount
+      - Invoiced Per Member
+      - Invoiced Per Script
+      - Invoiced Per Utilizer
+    primary_use: "Cost trending, budgeting, financial reporting"
+    
+  utilization_measures:
+    description: "Volume and utilization metrics"
+    measures:
+      - Script Count
+      - Scripts Per 1000
+      - Scripts Per Member
+      - Scripts Per Utilizer
+      - Days Supply
+      - Drug Quantity
+      - Units Per Day
+    primary_use: "Utilization management, trend analysis, benchmarking"
+    
+  member_counts:
+    description: "Member population denominators"
+    measures:
+      - Total Members
+      - Utilizing Members
+    primary_use: "Population denominators for per-member metrics"
+    
+  ratio_measures:
+    description: "Calculated ratios and per-unit metrics"
+    measures:
+      - Invoiced Per Member
+      - Invoiced Per Script
+      - Invoiced Per Utilizer
+      - Scripts Per Member
+      - Scripts Per Utilizer
+      - Scripts Per 1000
+      - Quantity Per Script
+      - Units Per Day
+    primary_use: "Comparative analysis, benchmarking"
+
+# Measure Dependencies
+# These show which measures depend on other measures (calculated measures)
+measure_dependencies:
+  
+  - measure: Invoiced Per Member
+    requires:
+      - Invoiced Amount
+      - Total Members
+    calculation: "Invoiced Amount / Total Members"
+    
+  - measure: Invoiced Per Script
+    requires:
+      - Invoiced Amount
+      - Script Count
+    calculation: "Invoiced Amount / Script Count"
+    
+  - measure: Invoiced Per Utilizer
+    requires:
+      - Invoiced Amount
+      - Utilizing Members
+    calculation: "Invoiced Amount / Utilizing Members"
+    
+  - measure: Scripts Per Member
+    requires:
+      - Script Count
+      - Total Members
+    calculation: "Script Count / Total Members"
+    
+  - measure: Scripts Per Utilizer
+    requires:
+      - Script Count
+      - Utilizing Members
+    calculation: "Script Count / Utilizing Members"
+    
+  - measure: Scripts Per 1000
+    requires:
+      - Scripts Per Member
+    calculation: "Scripts Per Member * 1000"
+    
+  - measure: Quantity Per Script
+    requires:
+      - Drug Quantity
+      - Script Count
+    calculation: "Drug Quantity / Script Count"
+    
+  - measure: Units Per Day
+    requires:
+      - Drug Quantity
+      - Days Supply
+    calculation: "Drug Quantity / Days Supply"
+
+# Conversion to Metric View YAML
+# These measures can be converted to metric view syntax as follows:
+
+metric_view_measure_examples:
+  
+  # Direct aggregation measures
+  - measure_name: "Script Count"
+    metric_view_yaml: |
+      - name: script_count
+        expr: COUNT(1)
+        display_name: 'Total Scripts'
+        synonyms: ['scripts', 'prescriptions', 'claims']
+        format:
+          type: number
+          decimal_places:
+            type: all
+          hide_group_separator: true
+  
+  - measure_name: "Days Supply"
+    metric_view_yaml: |
+      - name: total_days_supply
+        expr: SUM(DrugDaySupplyCount)
+        display_name: 'Total Days Supply'
+        synonyms: ['days supply', 'supply days']
+        format:
+          type: number
+          decimal_places:
+            type: all
+  
+  - measure_name: "Invoiced Amount"
+    metric_view_yaml: |
+      - name: invoiced_amount
+        expr: SUM(InvoicedAmount)
+        display_name: 'Total Invoiced Amount'
+        synonyms: ['invoiced', 'billed amount', 'invoiced cost']
+        format:
+          type: currency
+          currency_code: USD
+          decimal_places:
+            type: exact
+            places: 0
+          abbreviation: compact
+  
+  - measure_name: "Utilizing Members"
+    metric_view_yaml: |
+      - name: utilizing_members
+        expr: COUNT(DISTINCT Member_SK)
+        display_name: 'Utilizing Members'
+        synonyms: ['members with prescriptions', 'pharmacy utilizers']
+        format:
+          type: number
+          decimal_places:
+            type: all
+          hide_group_separator: true
+  
+  # Calculated ratio measures using MEASURE() composability
+  - measure_name: "Invoiced Per Member"
+    metric_view_yaml: |
+      - name: invoiced_per_member
+        expr: MEASURE(invoiced_amount) / MEASURE(total_members)
+        display_name: 'Invoiced Per Member'
+        synonyms: ['PMPM invoiced', 'cost per member', 'invoiced PMPM']
+        format:
+          type: currency
+          currency_code: USD
+          decimal_places:
+            type: exact
+            places: 2
+  
+  - measure_name: "Scripts Per Member"
+    metric_view_yaml: |
+      - name: scripts_per_member
+        expr: MEASURE(script_count) / MEASURE(total_members)
+        display_name: 'Scripts Per Member'
+        synonyms: ['scripts PMPM', 'prescriptions per member']
+        format:
+          type: number
+          decimal_places:
+            type: exact
+            places: 2
+  
+  - measure_name: "Scripts Per 1000"
+    metric_view_yaml: |
+      - name: scripts_per_1000
+        expr: MEASURE(scripts_per_member) * 1000
+        display_name: 'Scripts Per 1,000 Members'
+        synonyms: ['scripts per thousand', 'utilization rate']
+        format:
+          type: number
+          decimal_places:
+            type: exact
+            places: 1
+
+# Important Filters for Pharmacy Measures
+critical_filters:
+  
+  exclude_reversals:
+    description: "Exclude reversal claims to get net utilization and costs"
+    filter: "RxClaimReversalFlag = 0 OR RxClaimReversalFlag IS NULL"
+    applies_to:
+      - All cost measures
+      - All utilization measures
+    rationale: "Reversal claims have negative amounts and void prior claims"
+    
+  active_members_only:
+    description: "Include only active enrolled members for PMPM calculations"
+    filter: "MemberStatusCode = 'A'"
+    applies_to:
+      - Total Members
+      - Per-member calculations
+    rationale: "PMPM metrics should use actively enrolled population"
+
+# Business Rules and Definitions
+business_rules:
+  
+  - rule: "Script Count"
+    definition: "One script = one fill (original or refill). Each fill is counted separately."
+    
+  - rule: "Utilizing Members"
+    definition: "Member who filled at least one prescription during the measurement period. Excludes members with zero pharmacy activity."
+    
+  - rule: "Total Members"
+    definition: "All enrolled members during the measurement period, regardless of pharmacy utilization."
+    
+  - rule: "PMPM (Per Member Per Month)"
+    definition: "Cost or utilization divided by total member months of enrollment. Typically calculated as total cost / total members for monthly reporting."
+    
+  - rule: "Days Supply"
+    definition: "Number of days the prescription is intended to last. Standard fills are 30, 60, or 90 days."
+    
+  - rule: "Invoiced Amount"
+    definition: "Total amount billed by the pharmacy. May differ from paid amount due to negotiated rates."
+
+# Notes for Metric View Implementation
+implementation_notes:
+  
+  - note: "Total Members measure"
+    details: "Currently sourced from fact_membermonth_detail. When creating pharmacy metric view, you'll need to either (1) join to member month table, or (2) calculate distinct members from pharmacy table itself."
+    recommendation: "For pharmacy-only views, use COUNT(DISTINCT Member_SK) from pharmacy table. For true PMPM, join to member month table."
+    
+  - note: "Format patterns"
+    details: "Currency formats show pattern '\$#,0;(\$#,0);\$#,0' which handles positive, negative, and zero values."
+    recommendation: "In metric views, use standard currency format with abbreviation: compact for large numbers."
+    
+  - note: "Composability"
+    details: "All ratio measures can be implemented using MEASURE() function to reference base measures."
+    recommendation: "Define atomic measures first (Script Count, Invoiced Amount, etc.), then build ratios using MEASURE() syntax."
+    
+  - note: "Member counts"
+    details: "Distinguish between Total Members (enrollment-based) and Utilizing Members (pharmacy activity-based)."
+    recommendation: "Create both measures to support different per-member calculations."
+
+# Additional Measures to Consider
+# Based on fact_pharmacy schema, these additional measures could be valuable:
+
+suggested_additional_measures:
+  
+  cost_measures:
+    - name: "Plan Paid Amount"
+      expr: "SUM(IngredientPaidAmount) + SUM(DispensingPaidAmount)"
+      description: "Total amount paid by plan (ingredient + dispensing)"
+      
+    - name: "Member Paid Amount"
+      expr: "SUM(PatientPaidAmount)"
+      description: "Total out-of-pocket paid by members"
+      
+    - name: "Total Copay"
+      expr: "SUM(CopayAmount)"
+      description: "Total member copayments"
+      
+    - name: "Total Deductible"
+      expr: "SUM(AppliedPeriodicDeductableAmount)"
+      description: "Total deductible amounts applied"
+  
+  utilization_measures:
+    - name: "Generic Utilization Rate"
+      expr: "SUM(CASE WHEN PBMGenericFlag = 1 THEN 1 ELSE 0 END) / COUNT(1)"
+      description: "Percentage of scripts that are generic"
+      
+    - name: "Average Days Supply"
+      expr: "AVG(DrugDaySupplyCount)"
+      description: "Average days supply per fill"
+      
+    - name: "Mail Order Rate"
+      expr: "SUM(CASE WHEN DrugDaySupplyCount >= 84 THEN 1 ELSE 0 END) / COUNT(1)"
+      description: "Percentage of scripts with 90-day supply (proxy for mail order)"

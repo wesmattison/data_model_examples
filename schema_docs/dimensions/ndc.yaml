@@ -1,0 +1,928 @@
+# NDC (National Drug Code) Dimension Table Schema
+# Status: REVIEWED - Pharmacy claims drug dimension
+# Created: 2026-02-09
+
+table:
+  name: catalog.schema.dim_ndc  # TODO: Update with actual catalog.schema
+  type: dimension
+  description: "National Drug Code (NDC) dimension providing comprehensive drug classification and hierarchy for pharmacy claims analysis. Contains standard drug taxonomies, manufacturer information, therapeutic classifications, and custom business flags. One row per NDC code."
+  grain: "One row per unique NDC code"
+  source_system: "NDC database with custom enrichments"
+  refresh_frequency: "TODO: Specify refresh frequency (typically monthly for NDC updates)"
+  
+  primary_key: [Ndc_SK]
+  
+  # Natural key is the NDC code
+  natural_key: [NDCCode]
+  
+  data_quality_notes:
+    - "NDC codes follow FDA standard format (10 or 11 digits)"
+    - "Contains multiple hierarchical drug classifications"
+    - "Includes custom flags for business rules (MaintenanceDrugFlag, BrandProductFlag, ControlledSubstanceFlag, SpecialtyFlag)"
+    - "MediSpan fields provide standardized drug classifications"
+    - "Some hierarchical fields may have limited SME knowledge - document as usage clarifies"
+
+columns:
+  # Surrogate Key
+  - name: Ndc_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "System-generated surrogate key - use for joins to pharmacy fact tables only"
+    
+    genie:
+      description: "Unique system-generated identifier for each NDC"
+      synonyms: ["NDC key", "drug key"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+      unique: true
+      primary_key: true
+
+  # Primary Natural Key
+  - name: NDCCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: natural_key
+      reason: "National Drug Code - FDA standard drug identifier, essential for pharmacy analysis"
+    
+    genie:
+      description: "National Drug Code (NDC) - a unique 10 or 11-digit identifier assigned by the FDA to each drug product. Format: labeler code + product code + package code."
+      synonyms: ["NDC", "drug code", "national drug code", "product code"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+      unique: true
+    
+    sample_values: ["00002-3225-01", "55111-0123-45"]
+    
+    notes: "Standard FDA format. First segment is labeler (manufacturer), second is product, third is package size."
+
+  # Drug Names and Descriptions
+  - name: DrugProductDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "PRIMARY FIELD: Drug product description - main display name for drugs in reports"
+    
+    genie:
+      description: "Full drug product description including brand/generic name, strength, and form (e.g., 'Lipitor 20mg Tablet', 'Amoxicillin 500mg Capsule')"
+      synonyms: ["drug name", "drug product", "medication name", "drug description"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["Lipitor 20mg Tablet", "Metformin 500mg Tablet", "Amoxicillin 500mg Capsule"]
+
+  - name: DrugLabelName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Drug label name - may be shorter/branded version"
+    
+    genie:
+      description: "Drug label name - typically the brand or marketing name shown on the drug label"
+      synonyms: ["label name", "brand label"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: DrugGenericName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Generic drug name - essential for generic vs brand analysis"
+    
+    genie:
+      description: "Generic (non-proprietary) name of the drug (e.g., 'atorvastatin' for Lipitor, 'metformin' for Glucophage)"
+      synonyms: ["generic name", "generic drug", "chemical name"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["atorvastatin", "metformin", "amoxicillin", "lisinopril"]
+
+  - name: DrugBaseNameCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Base drug name code - may be useful for grouping drug variations"
+    
+    genie:
+      description: "NEEDS REVIEW: Code representing the base drug name (likely groups different strengths/forms of the same drug)"
+      synonyms: ["base drug code"]
+      confidence_score: 0.60
+      needs_review: true
+      review_notes: "Limited knowledge - appears to group drug variants but needs SME clarification"
+    
+    constraints:
+      nullable: true
+
+  - name: DrugNameExtensionCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Extension code - purpose unclear without SME knowledge"
+    
+    genie:
+      description: "NEEDS REVIEW: Drug name extension code - purpose unclear"
+      confidence_score: 0.30
+      needs_review: true
+      review_notes: "Limited knowledge - may be internal classification or modifier"
+    
+    constraints:
+      nullable: true
+
+  - name: DrugNameExtensionDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Extension description - purpose unclear without SME knowledge"
+    
+    genie:
+      description: "NEEDS REVIEW: Description for DrugNameExtensionCode"
+      confidence_score: 0.30
+      needs_review: true
+    
+    constraints:
+      nullable: true
+
+  - name: DrugNameDoseFormCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Dose form code (tablet, capsule, liquid, etc.)"
+    
+    genie:
+      description: "Code for drug dosage form (e.g., tablet, capsule, syrup, injection)"
+      synonyms: ["dose form code", "form code"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: DrugNameDoseFormDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Dose form description - useful for analysis by formulation type"
+    
+    genie:
+      description: "Description of drug dosage form (e.g., 'Tablet', 'Capsule', 'Oral Syrup', 'Injection')"
+      synonyms: ["dose form", "formulation", "drug form"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["Tablet", "Capsule", "Oral Syrup", "Injection", "Topical Cream"]
+
+  # Manufacturer Information
+  - name: DrugManufacturerId
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Manufacturer identifier - useful for manufacturer analysis"
+    
+    genie:
+      description: "Unique identifier for the drug manufacturer (labeler code from NDC)"
+      synonyms: ["manufacturer ID", "labeler code", "manufacturer code"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: DrugManufacturerName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Manufacturer name - essential for manufacturer/supplier analysis"
+    
+    genie:
+      description: "Name of the drug manufacturer or labeler (e.g., 'Pfizer', 'Teva Pharmaceuticals', 'CVS Pharmacy')"
+      synonyms: ["manufacturer", "drug manufacturer", "pharmaceutical company", "labeler"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["Pfizer Inc", "Teva Pharmaceuticals", "Mylan", "CVS Pharmacy"]
+
+  # Drug Classification Hierarchies
+  # Note: Multiple overlapping hierarchies exist - document as usage clarifies
+  
+  - name: DrugSuperGroupCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "HIERARCHY: Top-level drug classification"
+    
+    genie:
+      description: "NEEDS REVIEW: Highest level of drug classification hierarchy - likely therapeutic category"
+      synonyms: ["drug super group", "top category"]
+      confidence_score: 0.70
+      needs_review: true
+      review_notes: "Hierarchical level - appears to be top of classification tree"
+    
+    constraints:
+      nullable: true
+
+  - name: DrugSuperGroupDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "HIERARCHY: Top-level drug classification description"
+    
+    genie:
+      description: "Description of the drug super group classification"
+      synonyms: ["drug super group"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: DrugGroupCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "HIERARCHY: Mid-level drug classification"
+    
+    genie:
+      description: "NEEDS REVIEW: Mid-level drug classification - likely therapeutic subclass"
+      synonyms: ["drug group"]
+      confidence_score: 0.70
+      needs_review: true
+      review_notes: "Hierarchical level under SuperGroup"
+    
+    constraints:
+      nullable: true
+
+  - name: DrugGroupDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "HIERARCHY: Mid-level drug classification description"
+    
+    genie:
+      description: "Description of the drug group classification"
+      synonyms: ["drug group"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: DrugClassCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "HIERARCHY: Drug class code - commonly used classification"
+    
+    genie:
+      description: "Drug class code - therapeutic classification (e.g., antihypertensives, antibiotics, antidiabetics)"
+      synonyms: ["drug class", "therapeutic class"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: DrugClassDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "HIERARCHY: Drug class description - primary therapeutic classification"
+    
+    genie:
+      description: "Description of drug therapeutic class (e.g., 'Beta Blockers', 'Statins', 'ACE Inhibitors')"
+      synonyms: ["drug class", "therapeutic class"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["Statins", "ACE Inhibitors", "Penicillins", "SSRIs"]
+
+  - name: DrugSubClassCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "HIERARCHY: Detailed drug subclass"
+    
+    genie:
+      description: "Drug subclass code - more detailed therapeutic classification under drug class"
+      synonyms: ["drug subclass", "subclass"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: DrugSubClassDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "HIERARCHY: Detailed drug subclass description"
+    
+    genie:
+      description: "Description of drug subclass - detailed therapeutic category"
+      synonyms: ["drug subclass"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  # Standard Drug Classification Systems
+  - name: MediSpanDEAClassCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "DEA schedule classification (controlled substances)"
+    
+    genie:
+      description: "DEA (Drug Enforcement Administration) schedule classification code for controlled substances (Schedule I-V). Empty for non-controlled drugs."
+      synonyms: ["DEA class", "DEA schedule", "controlled substance schedule"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["C2", "C3", "C4", "C5", null]
+    
+    notes: "C1/Schedule I (no medical use), C2/Schedule II (high abuse potential), C3-C5 (decreasing abuse potential)"
+
+  - name: DatabaseCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Internal database code - likely technical/system field"
+    
+    genie:
+      description: "NEEDS REVIEW: Internal database or system code"
+      confidence_score: 0.40
+      needs_review: true
+    
+    constraints:
+      nullable: true
+
+  - name: OTCCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Over-the-counter indicator code"
+    
+    genie:
+      description: "Code indicating if drug is available over-the-counter (OTC) vs prescription-only"
+      synonyms: ["OTC code", "over the counter"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: UnitOfMeasureCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Unit of measure for drug dispensing"
+    
+    genie:
+      description: "Unit of measure code for the drug (e.g., tablet, ml, gm, capsule, vial)"
+      synonyms: ["unit of measure", "UOM", "dispensing unit"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["EA", "ML", "GM", "TABLET", "CAPSULE"]
+
+  # Maintenance Drug Information
+  - name: MaintenanceDrugCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Maintenance drug classification code"
+    
+    genie:
+      description: "Code indicating if drug is classified as a maintenance medication (chronic condition drugs taken regularly vs acute/short-term)"
+      synonyms: ["maintenance drug code", "maintenance indicator"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: MaintenanceDrugDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Maintenance drug classification description"
+    
+    genie:
+      description: "Description indicating if drug is for maintenance therapy"
+      synonyms: ["maintenance drug"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: MaintenanceDrugFlag
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "CUSTOM FLAG: Maintenance drug indicator - important for pharmacy program analysis"
+    
+    genie:
+      description: "Custom flag indicating maintenance drug status (1=maintenance, 0=not maintenance). Maintenance drugs are for chronic conditions requiring ongoing therapy."
+      synonyms: ["is maintenance drug", "maintenance flag", "chronic medication"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: [0, 1]
+    
+    notes: "Used for 90-day supply programs and chronic disease management initiatives"
+
+  # Custom Business Flags
+  - name: BrandProductFlag
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "CUSTOM FLAG: Brand vs generic indicator - critical for cost analysis"
+    
+    genie:
+      description: "Custom flag indicating if drug is brand name (1) or generic (0). Used for brand vs generic utilization and cost analysis."
+      synonyms: ["is brand", "brand flag", "brand vs generic"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: [0, 1]
+    
+    notes: "Key driver for pharmacy cost management and generic substitution programs"
+
+  - name: ControlledSubstanceFlag
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "CUSTOM FLAG: Controlled substance indicator - important for compliance and opioid monitoring"
+    
+    genie:
+      description: "Custom flag indicating if drug is a DEA-controlled substance (1=controlled, 0=not controlled). Includes opioids, stimulants, benzodiazepines, etc."
+      synonyms: ["is controlled substance", "controlled drug", "DEA controlled"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: [0, 1]
+    
+    notes: "Critical for opioid monitoring, prior authorization, and regulatory compliance reporting"
+
+  - name: SpecialtyFlag
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "CUSTOM FLAG: Specialty drug indicator - important for high-cost drug management"
+    
+    genie:
+      description: "Custom flag indicating if drug is classified as specialty medication (1=specialty, 0=traditional). Specialty drugs are typically high-cost, treat complex conditions, require special handling."
+      synonyms: ["is specialty drug", "specialty medication", "specialty pharmacy"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: [0, 1]
+    
+    notes: "Specialty drugs often require specialty pharmacy, prior authorization, and care management"
+
+  # Dates
+  - name: GPINumber
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "GPI number - standard drug classification system"
+    
+    genie:
+      description: "Generic Product Identifier (GPI) - a 14-character hierarchical classification system used to identify drugs by therapeutic class and ingredients"
+      synonyms: ["GPI", "generic product identifier"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    notes: "MediSpan's proprietary classification - widely used in pharmacy benefit management"
+
+  - name: StartDate
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Effective start date - technical field for NDC validity"
+    
+    genie:
+      description: "Effective start date for this NDC record"
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: EndDate
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Effective end date - technical field for NDC validity"
+    
+    genie:
+      description: "Effective end date for this NDC record (null if currently active)"
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  # MediSpan AWP Pricing Fields
+  - name: MediSpanDrugProductName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "MediSpan standardized product name"
+    
+    genie:
+      description: "MediSpan's standardized drug product name"
+      synonyms: ["MediSpan product"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: MediSpanDrugProductGenericName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "MediSpan standardized generic name"
+    
+    genie:
+      description: "MediSpan's standardized generic drug name"
+      synonyms: ["MediSpan generic"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: MediSpanDrugProductShortDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "MediSpan short description - compact display name"
+    
+    genie:
+      description: "MediSpan's abbreviated drug product description"
+      synonyms: ["MediSpan short name"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: MedispanDrugAWPPriceTypeCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "AWP price type code - technical pricing field"
+    
+    genie:
+      description: "Code indicating the type of Average Wholesale Price (AWP) for pricing calculations"
+      confidence_score: 0.70
+      needs_review: true
+    
+    constraints:
+      nullable: true
+
+  - name: MedispanDrugAWPUnitPriceAmount
+    data_type: double
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "AWP unit price - useful for cost analysis (though typically used in fact tables)"
+    
+    genie:
+      description: "Average Wholesale Price (AWP) per unit - industry benchmark pricing"
+      synonyms: ["AWP", "average wholesale price", "unit price"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    notes: "AWP is commonly used as pricing benchmark; actual reimbursement is typically AWP minus a discount percentage"
+
+  - name: MedispanDrugAWPPackagePriceAmount
+    data_type: double
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "AWP package price - useful for cost analysis"
+    
+    genie:
+      description: "Average Wholesale Price (AWP) for the entire package"
+      synonyms: ["package AWP", "package price"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  # FDA Therapeutic Classification
+  - name: FDATherapeuticClassCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "FDA therapeutic class - standard regulatory classification"
+    
+    genie:
+      description: "FDA therapeutic class code - official FDA classification system"
+      synonyms: ["FDA class", "therapeutic class"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: FDATherapeuticClassDesc
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "FDA therapeutic class description"
+    
+    genie:
+      description: "FDA therapeutic class description"
+      synonyms: ["FDA class"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+# Metric View Recommendations
+metric_view_suggestions:
+  
+  confidence_threshold: 0.70
+  status: "READY - Primary fields identified; some hierarchical fields need usage clarification"
+  
+  # Core fields for pharmacy claims analysis
+  recommended_dimensions:
+    - NDCCode                    # National Drug Code
+    - DrugProductDesc            # Primary drug name
+    - DrugGenericName            # Generic name
+    - DrugLabelName              # Brand/label name
+    - DrugClassDesc              # Therapeutic class
+    - DrugSubClassDesc           # Therapeutic subclass
+    - DrugManufacturerName       # Manufacturer
+    - DrugNameDoseFormDesc       # Dosage form (tablet, capsule, etc.)
+  
+  # Custom business flags - CRITICAL for pharmacy analysis
+  critical_flags:
+    - BrandProductFlag           # Brand vs generic (cost analysis)
+    - MaintenanceDrugFlag        # Chronic vs acute (90-day programs)
+    - ControlledSubstanceFlag    # DEA controlled (opioid monitoring)
+    - SpecialtyFlag              # Specialty drugs (high-cost management)
+  
+  # Additional classification fields
+  useful_dimensions:
+    - DrugSuperGroupDesc         # Top-level category
+    - DrugGroupDesc              # Mid-level category
+    - MediSpanDEAClassCode       # DEA schedule (C2, C3, etc.)
+    - FDATherapeuticClassDesc    # FDA classification
+    - UnitOfMeasureCode          # Dispensing unit
+    - OTCCode                    # OTC vs prescription
+  
+  # MediSpan standardized names (alternative naming)
+  medispan_fields:
+    - MediSpanDrugProductName
+    - MediSpanDrugProductGenericName
+    - MediSpanDrugProductShortDesc
+  
+  # Pricing fields (typically used in measures, not dimensions)
+  pricing_fields:
+    - MedispanDrugAWPUnitPriceAmount
+    - MedispanDrugAWPPackagePriceAmount
+  
+  # Supporting field for joins only
+  join_keys:
+    - Ndc_SK                     # For joining to pharmacy fact tables
+  
+  # Fields needing clarification
+  needs_review_fields:
+    - DrugBaseNameCode           # Grouping logic unclear
+    - DrugNameExtensionCode      # Purpose unclear
+    - MaintenanceDrugCode        # Relationship to MaintenanceDrugFlag
+    - DatabaseCode               # Technical field purpose
+  
+  recommended_measures: []  # This is a dimension table, not a fact table
+  
+  recommended_filters:
+    - "EndDate IS NULL"  # Only include currently active NDCs
+  
+  sample_metric_view_yaml: |
+    version: 1.1
+    source: catalog.schema.dim_ndc
+    filter: EndDate IS NULL  # Only active NDCs
+    
+    dimensions:
+      - name: NDC Code
+        expr: NDCCode
+        display_name: 'NDC'
+        synonyms: ['NDC', 'drug code', 'national drug code']
+        
+      - name: Drug Name
+        expr: DrugProductDesc
+        display_name: 'Drug Name'
+        synonyms: ['drug', 'medication', 'drug name', 'product']
+        
+      - name: Generic Name
+        expr: DrugGenericName
+        display_name: 'Generic Name'
+        synonyms: ['generic', 'generic drug', 'chemical name']
+        
+      - name: Drug Class
+        expr: DrugClassDesc
+        display_name: 'Drug Class'
+        synonyms: ['therapeutic class', 'drug class', 'class']
+        
+      - name: Manufacturer
+        expr: DrugManufacturerName
+        display_name: 'Manufacturer'
+        synonyms: ['manufacturer', 'drug manufacturer', 'pharma company']
+        
+      - name: Is Brand
+        expr: BrandProductFlag
+        display_name: 'Is Brand Drug'
+        synonyms: ['brand', 'brand drug', 'brand vs generic']
+        
+      - name: Is Maintenance
+        expr: MaintenanceDrugFlag
+        display_name: 'Is Maintenance Drug'
+        synonyms: ['maintenance', 'chronic medication', 'maintenance drug']
+        
+      - name: Is Controlled Substance
+        expr: ControlledSubstanceFlag
+        display_name: 'Is Controlled Substance'
+        synonyms: ['controlled substance', 'controlled drug', 'DEA controlled']
+        
+      - name: Is Specialty
+        expr: SpecialtyFlag
+        display_name: 'Is Specialty Drug'
+        synonyms: ['specialty', 'specialty drug', 'specialty medication']
+        
+      - name: Dose Form
+        expr: DrugNameDoseFormDesc
+        display_name: 'Dose Form'
+        synonyms: ['form', 'dosage form', 'formulation']
+  
+  usage_notes:
+    - "NDC dimension provides comprehensive drug classification for pharmacy claims"
+    - "Four critical custom flags drive key pharmacy programs: Brand, Maintenance, Controlled, Specialty"
+    - "Multiple overlapping hierarchies exist - usage will clarify which are most relevant"
+    - "When joining to pharmacy fact tables, use Ndc_SK as foreign key"
+    - "Filter to EndDate IS NULL to exclude discontinued NDCs"
+    - "AWP pricing fields are useful but actual costs come from claims fact tables"
+    - "DEA schedule (MediSpanDEAClassCode) is critical for opioid monitoring and reporting"
+
+  common_use_cases:
+    - "Brand vs generic utilization and cost analysis (BrandProductFlag)"
+    - "Maintenance drug program reporting (90-day supply eligibility)"
+    - "Opioid and controlled substance monitoring (ControlledSubstanceFlag, DEA schedule)"
+    - "Specialty pharmacy management and cost containment (SpecialtyFlag)"
+    - "Therapeutic class analysis (drug mix, adherence by class)"
+    - "Manufacturer analysis (rebates, market share)"
+    - "Generic substitution opportunity identification"
+    - "Formulary management and utilization analysis"
+
+# Review Summary
+review_summary:
+  reviewer: "Business User/SME"
+  review_date: "2026-02-09"
+  status: "MOSTLY COMPLETE - Primary fields clear, some hierarchical fields need clarification as usage emerges"
+  
+  clarifications_received:
+    - "NDC contains drug hierarchy and custom business flags"
+    - "Four key flags: Brand, Maintenance, Controlled Substance, Specialty"
+    - "Limited knowledge on some hierarchical fields (SuperGroup, Group, BaseNameCode)"
+    - "MediSpan fields provide industry-standard classifications"
+  
+  next_steps:
+    - "Ready to use for pharmacy metric views with primary fields"
+    - "Document hierarchical field usage as reporting requirements clarify"
+    - "Consider data quality review of flag populations"
+    - "Validate DEA schedule codes against current regulations"

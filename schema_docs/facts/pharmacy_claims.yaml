@@ -1,0 +1,1698 @@
+# Fact Pharmacy Claims Table Schema
+# Status: DRAFT - Pharmacy claims fact table with extensive cost fields
+# Created: 2026-02-09
+
+table:
+  name: catalog.schema.fact_pharmacy  # TODO: Update with actual catalog.schema
+  type: fact
+  description: "Pharmacy claims fact table containing detailed pharmacy claim transactions including costs, payments, quantities, and claim attributes. One row per pharmacy claim line. Used for pharmacy utilization, cost, and trend analysis."
+  grain: "One row per pharmacy claim line"
+  source_system: "Pharmacy Benefit Manager (PBM) / Claims System"
+  refresh_frequency: "Daily or as claims are adjudicated"
+  
+  primary_key: [PharmFactClaimID]
+  
+  # Foreign keys to dimensions
+  foreign_keys:
+    - Practitioner_SK      # Prescribing provider
+    - Pharmacy_SK          # Dispensing pharmacy
+    - Member_SK            # Member who received prescription
+    - Subscriber_SK        # Subscriber/policyholder
+    - Ndc_SK              # National Drug Code (drug product)
+    - MemberAgeAtRxFill_SK # Member age at fill
+    - MarketProgram_SK     # Market/Program (likely deprecated, check with MarketProduct)
+    - FilledDate_Sk       # Date dimension - filled date
+    - IncurredDate_SK     # Date dimension - incurred date
+    - WrittenDate_Sk      # Date dimension - written/prescribed date
+    - PaidDate_Sk         # Date dimension - paid date
+    - TransactionSubmitDate_Sk  # Date dimension - transaction submit date
+    - PharmacyClaimAttribute_SK # Additional claim attributes
+  
+  data_quality_notes:
+    - "Claim-level grain - one record per filled prescription"
+    - "Multiple cost fields represent different perspectives: ingredient cost, dispensing fees, patient payments, plan payments"
+    - "Quantity fields: PrescribedQuantity, DrugDaySupplyCount, DrugMetricQuantity"
+    - "Reversal claims indicated by RxClaimReversalFlag"
+    - "Generic substitution tracked via PBMGenericFlag and CompoundFlag"
+
+columns:
+  # Primary Key
+  - name: PharmFactClaimID
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "PRIMARY KEY: Unique identifier for each pharmacy claim record"
+    
+    genie:
+      description: "Unique system-generated identifier for each pharmacy claim line"
+      synonyms: ["claim ID", "pharmacy claim ID"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+      unique: true
+      primary_key: true
+
+  # Claim Identifiers
+  - name: RxNumber
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Prescription number - useful for tracking refills and claim identity"
+    
+    genie:
+      description: "Prescription (Rx) number - unique identifier for the prescription from the pharmacy system"
+      synonyms: ["prescription number", "Rx number", "Rx #"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["RX123456", "RX789012"]
+
+  - name: ExternalTransactionRefID
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "External transaction reference - technical field"
+    
+    genie:
+      description: "External system transaction reference ID"
+      confidence_score: 0.70
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ExternalTransCrossRefID
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "External cross-reference - technical field"
+    
+    genie:
+      description: "External system cross-reference transaction ID"
+      confidence_score: 0.70
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  # Foreign Keys to Dimensions
+  - name: Practitioner_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "FOREIGN KEY: Links to prescribing provider dimension"
+    
+    genie:
+      description: "Foreign key to provider/practitioner dimension - identifies the prescribing provider"
+      synonyms: ["provider key", "prescriber key"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+      foreign_key: dim_provider.Provider_SK
+
+  - name: Pharmacy_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "FOREIGN KEY: Links to pharmacy dimension"
+    
+    genie:
+      description: "Foreign key to pharmacy dimension - identifies the dispensing pharmacy location"
+      synonyms: ["pharmacy key"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+      foreign_key: dim_pharmacy.Pharmacy_SK
+
+  - name: Member_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "FOREIGN KEY: Links to member dimension"
+    
+    genie:
+      description: "Foreign key to member dimension - identifies the member who received the prescription"
+      synonyms: ["member key"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+      foreign_key: dim_member.Member_SK
+
+  - name: Subscriber_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "FOREIGN KEY: Links to subscriber dimension"
+    
+    genie:
+      description: "Foreign key to subscriber dimension - identifies the policyholder"
+      synonyms: ["subscriber key"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: Ndc_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "FOREIGN KEY: Links to NDC (drug) dimension"
+    
+    genie:
+      description: "Foreign key to NDC dimension - identifies the drug product dispensed"
+      synonyms: ["NDC key", "drug key"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+      foreign_key: dim_ndc.Ndc_SK
+
+  - name: MemberAgeAtRxFill_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "Foreign key to age dimension at time of fill"
+    
+    genie:
+      description: "Foreign key to age dimension - member's age at time prescription was filled"
+      synonyms: ["age key", "member age key"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: MarketProgram_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "DEPRECATED: Older version - likely replaced by MarketProduct_SK (check if exists)"
+    
+    genie:
+      description: "DEPRECATED: Legacy market/program foreign key - likely replaced by MarketProduct_SK"
+      confidence_score: 0.80
+      needs_review: true
+      review_notes: "Confirm if MarketProduct_SK exists in this table; if so, use that instead"
+    
+    constraints:
+      nullable: true
+
+  # Date Foreign Keys
+  - name: FilledDate_Sk
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "FOREIGN KEY: Date prescription was filled - use for time-based analysis"
+    
+    genie:
+      description: "Foreign key to date dimension - date the prescription was filled/dispensed by the pharmacy"
+      synonyms: ["fill date key", "dispensed date key"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+      foreign_key: dim_date.DimensionDate_sk
+
+  - name: IncurredDate_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "FOREIGN KEY: Date service was incurred"
+    
+    genie:
+      description: "Foreign key to date dimension - date the service was incurred (typically same as filled date for pharmacy)"
+      synonyms: ["incurred date key", "service date key"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+      foreign_key: dim_date.DimensionDate_sk
+
+  - name: WrittenDate_Sk
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "FOREIGN KEY: Date prescription was written by provider"
+    
+    genie:
+      description: "Foreign key to date dimension - date the prescription was written by the prescriber"
+      synonyms: ["written date key", "prescribed date key"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+      foreign_key: dim_date.DimensionDate_sk
+
+  - name: PaidDate_Sk
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "FOREIGN KEY: Date claim was paid"
+    
+    genie:
+      description: "Foreign key to date dimension - date the claim was paid by the plan"
+      synonyms: ["paid date key", "payment date key"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+      foreign_key: dim_date.DimensionDate_sk
+
+  - name: TransactionSubmitDate_Sk
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "FOREIGN KEY: Date claim was submitted"
+    
+    genie:
+      description: "Foreign key to date dimension - date the claim transaction was submitted to the plan"
+      synonyms: ["submit date key", "submission date key"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+      foreign_key: dim_date.DimensionDate_sk
+
+  - name: PharmacyClaimAttribute_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "Foreign key to claim attributes dimension"
+    
+    genie:
+      description: "Foreign key to pharmacy claim attributes dimension - additional claim characteristics"
+      confidence_score: 0.80
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  # Claim Flags
+  - name: PBMGenericFlag
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Generic indicator - critical for brand vs generic analysis"
+    
+    genie:
+      description: "PBM generic drug flag (1=generic, 0=brand). Indicates if the dispensed drug was generic or brand name."
+      synonyms: ["generic flag", "is generic", "generic indicator"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: [0, 1]
+    
+    notes: "Critical field for generic substitution and cost analysis"
+
+  - name: CompoundFlag
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Compound drug indicator - used for compound medication analysis"
+    
+    genie:
+      description: "Compound medication flag (1=compounded, 0=not compound). Indicates if the prescription was a pharmacy-compounded medication."
+      synonyms: ["compound", "is compound", "compounded drug"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: [0, 1]
+    
+    notes: "Compound medications are custom-mixed by pharmacists"
+
+  - name: RxClaimReversalFlag
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Reversal indicator - essential for identifying reversed/voided claims"
+    
+    genie:
+      description: "Claim reversal flag (1=reversal claim, 0=original claim). Indicates if this is a reversal of a previously paid claim."
+      synonyms: ["reversal", "is reversal", "voided claim", "reversed claim"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: [0, 1]
+    
+    notes: "Reversal claims typically have negative amounts. Filter these when calculating net costs."
+
+  # Transaction Details
+  - name: TransactionSubmitTime
+    data_type: timestamp
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Transaction timestamp - technical field, date dimension preferred"
+    
+    genie:
+      description: "Timestamp when claim transaction was submitted"
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: TransactionSource
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Transaction source system - may indicate claim origin"
+    
+    genie:
+      description: "Source system or channel for the claim transaction (e.g., retail pharmacy, mail order, specialty)"
+      synonyms: ["claim source", "transaction source"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  # Refill Information
+  - name: AuthorizedRefillCount
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Authorized refills - useful for adherence and utilization analysis"
+    
+    genie:
+      description: "Number of refills authorized by the prescriber for this prescription"
+      synonyms: ["refills authorized", "refill count", "number of refills"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: [0, 1, 2, 3, 5, 11]
+    
+    suggested_measures:
+      - name: "Total Authorized Refills"
+        expr: "SUM(AuthorizedRefillCount)"
+
+  - name: RefillNumber
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Refill sequence number - identifies which refill this is"
+    
+    genie:
+      description: "Refill number for this fill (0=original fill, 1=first refill, 2=second refill, etc.)"
+      synonyms: ["refill #", "refill sequence", "fill number"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: [0, 1, 2, 3]
+
+  # Quantity Fields
+  - name: PrescribedQuantity
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "PRIMARY MEASURE: Prescribed quantity - core utilization metric"
+    
+    genie:
+      description: "Quantity of drug prescribed by the provider (in units appropriate to the drug, e.g., tablets, ml)"
+      synonyms: ["prescribed quantity", "quantity prescribed", "Rx quantity"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    suggested_measures:
+      - name: "Total Prescribed Quantity"
+        expr: "SUM(PrescribedQuantity)"
+
+  - name: DrugDaySupplyCount
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "PRIMARY MEASURE: Days supply - critical for adherence and utilization"
+    
+    genie:
+      description: "Number of days the prescription is intended to last based on prescribed dosing (e.g., 30 days, 90 days)"
+      synonyms: ["days supply", "day supply", "days of supply", "supply days"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: [30, 60, 90]
+    
+    suggested_measures:
+      - name: "Total Days Supply"
+        expr: "SUM(DrugDaySupplyCount)"
+      - name: "Average Days Supply"
+        expr: "AVG(DrugDaySupplyCount)"
+
+  - name: ARX
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Unknown field - needs clarification"
+    
+    genie:
+      description: "NEEDS REVIEW: ARX field - purpose unclear"
+      confidence_score: 0.30
+      needs_review: true
+      review_notes: "Acronym meaning unknown - may be authorization-related"
+    
+    constraints:
+      nullable: true
+
+  - name: DrugMetricQuantity
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Metric quantity - standardized quantity measure"
+    
+    genie:
+      description: "Drug quantity in metric units - standardized measurement (e.g., grams, milliliters)"
+      synonyms: ["metric quantity", "quantity metric"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: DrugStrengthQuantity
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Drug strength - useful for analyzing dosage patterns"
+    
+    genie:
+      description: "Strength of the drug dispensed (e.g., '20mg', '500mg', '10mg/ml')"
+      synonyms: ["strength", "drug strength", "dosage strength"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["20mg", "500mg", "10mg/ml", "25mcg"]
+
+  # Submission and Status Fields
+  - name: SubmissionClarificationCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Claim processing code - technical field"
+    
+    genie:
+      description: "Submission clarification code - indicates special processing circumstances"
+      confidence_score: 0.70
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: CMSStatus
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "CMS status - important for Medicare Part D reporting"
+    
+    genie:
+      description: "CMS (Centers for Medicare & Medicaid Services) claim status - used for Medicare Part D reporting"
+      synonyms: ["CMS status", "Medicare status"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: NetIteration
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Technical field - claim iteration tracking"
+    
+    genie:
+      description: "Net iteration - tracks claim resubmissions or adjustments"
+      confidence_score: 0.65
+      needs_review: true
+    
+    constraints:
+      nullable: true
+
+  # Adjustment Fields
+  - name: AdjustmentTypeCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Adjustment type - indicates claim adjustments"
+    
+    genie:
+      description: "Type of claim adjustment (if this is an adjusted claim)"
+      synonyms: ["adjustment type", "adjustment code"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: AdjustmentReasonCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Adjustment reason - explains why claim was adjusted"
+    
+    genie:
+      description: "Reason for claim adjustment (if applicable)"
+      synonyms: ["adjustment reason"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: TransactionTypeCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Transaction type - distinguishes claim types (original, reversal, etc.)"
+    
+    genie:
+      description: "Type of claim transaction (e.g., original claim, reversal, adjustment)"
+      synonyms: ["transaction type", "claim type"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  # Pharmacy and Claim Codes
+  - name: PharmacyDAWCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "DAW code - Dispense As Written, indicates generic substitution status"
+    
+    genie:
+      description: "Dispense As Written (DAW) code - indicates if brand was dispensed when generic available (0=generic substituted, 1=brand medically necessary, 2=patient requested brand, etc.)"
+      synonyms: ["DAW", "dispense as written", "DAW code"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["0", "1", "2", "5"]
+    
+    notes: "DAW codes: 0=generic allowed and dispensed, 1=prescriber requires brand, 2=patient requested brand"
+
+  # Patient Information
+  - name: PatientAge
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Patient age at fill - useful for age-based analysis"
+    
+    genie:
+      description: "Patient age at time of prescription fill (in years)"
+      synonyms: ["age", "patient age", "member age"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: [25, 45, 67, 5]
+
+  - name: PatientPlaceOfServiceCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Place of service - indicates where prescription was filled"
+    
+    genie:
+      description: "Place of service code - where the prescription was filled (e.g., retail pharmacy, mail order, nursing home)"
+      synonyms: ["place of service", "service location"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: PatientFacilityID
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Facility ID - may contain PII or not broadly useful"
+    
+    genie:
+      description: "Facility identifier where patient received prescription (e.g., nursing home, hospital)"
+      confidence_score: 0.75
+      needs_review: true
+    
+    constraints:
+      nullable: true
+
+  - name: CMSPartDQualifiedFacilityFlag
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Part D qualified facility - important for Medicare reporting"
+    
+    genie:
+      description: "CMS Part D qualified facility flag - indicates if facility qualifies for Part D coverage"
+      synonyms: ["Part D facility", "qualified facility"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: MailOrderDaysSupplyQuantity
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Mail order days supply - specific to mail order fills"
+    
+    genie:
+      description: "Days supply for mail order prescriptions (typically 90 days for mail order)"
+      synonyms: ["mail order supply", "mail supply days"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: PatientResidenceCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Patient residence code - indicates care setting"
+    
+    genie:
+      description: "Patient residence code - indicates patient's care setting (e.g., home, nursing home, assisted living)"
+      synonyms: ["residence code", "care setting"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: PatientPersonCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Person code - unclear purpose"
+    
+    genie:
+      description: "NEEDS REVIEW: Patient person code - purpose unclear"
+      confidence_score: 0.50
+      needs_review: true
+    
+    constraints:
+      nullable: true
+
+  - name: PatientRelationshipCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Patient relationship - indicates relationship to subscriber"
+    
+    genie:
+      description: "Patient relationship to subscriber code (self, spouse, child, etc.)"
+      synonyms: ["relationship", "patient relationship"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: PatientEligibilityClarificationCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "Eligibility clarification - technical field"
+    
+    genie:
+      description: "Patient eligibility clarification code - special eligibility circumstances"
+      confidence_score: 0.70
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  # Drug Classification Codes
+  - name: DrugTypeCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Drug type code - classifies drug category"
+    
+    genie:
+      description: "Drug type classification code (e.g., legend/prescription, OTC)"
+      synonyms: ["drug type", "drug category"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: DrugDosageFormCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Dosage form code - indicates formulation (tablet, capsule, etc.)"
+    
+    genie:
+      description: "Drug dosage form code (tablet, capsule, liquid, injection, etc.)"
+      synonyms: ["dosage form", "form code"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: DrugCategoryCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Drug category - therapeutic or formulary classification"
+    
+    genie:
+      description: "Drug category classification code"
+      synonyms: ["drug category", "category code"]
+      confidence_score: 0.80
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: DEAClassificationCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "DEA schedule - controlled substance classification"
+    
+    genie:
+      description: "DEA (Drug Enforcement Administration) schedule classification (Schedule II-V for controlled substances)"
+      synonyms: ["DEA schedule", "controlled substance schedule"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["2", "3", "4", "5", null]
+
+  # Reversal Information
+  - name: ReversalCount
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Reversal count - tracks claim reversals"
+    
+    genie:
+      description: "Count of reversals for this claim (typically 0 or 1)"
+      synonyms: ["reversals", "reversal count"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: [0, 1]
+
+  # Cost and Payment Amount Fields
+  # Note: These are the core financial measures for pharmacy cost analysis
+  
+  - name: CopayAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "PRIMARY COST MEASURE: Member copayment amount"
+    
+    genie:
+      description: "Copayment amount paid by the member at point of sale (member out-of-pocket)"
+      synonyms: ["copay", "member copay", "copayment", "member cost share"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    suggested_measures:
+      - name: "Total Member Copay"
+        expr: "SUM(CopayAmount)"
+        description: "Sum of member copayments"
+
+  - name: DisallowIngredientAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Disallowed ingredient cost - important for cost reconciliation"
+    
+    genie:
+      description: "Ingredient cost amount disallowed by the plan (not reimbursed)"
+      synonyms: ["disallowed ingredient", "ingredient disallowance"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: InvoicedAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Invoiced amount - billed amount from pharmacy"
+    
+    genie:
+      description: "Total amount invoiced/billed by the pharmacy"
+      synonyms: ["invoiced", "billed amount"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: GrossDueAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Gross amount due - total claim amount before adjustments"
+    
+    genie:
+      description: "Gross amount due before any adjustments or discounts"
+      synonyms: ["gross due", "gross amount"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: MOOPAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "MOOP amount - maximum out-of-pocket tracking"
+    
+    genie:
+      description: "Maximum Out-Of-Pocket (MOOP) amount applied to this claim toward member's annual limit"
+      synonyms: ["MOOP", "max out of pocket", "out of pocket"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: OtherPayerRecognizedAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Other payer amount - coordination of benefits"
+    
+    genie:
+      description: "Amount paid or recognized by another payer (coordination of benefits)"
+      synonyms: ["other payer", "COB amount", "other insurance"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: DispensingSubmitAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Dispensing fee submitted - pharmacy dispensing fee"
+    
+    genie:
+      description: "Dispensing fee amount submitted by pharmacy (pharmacy's charge for filling prescription)"
+      synonyms: ["dispensing fee", "dispensing submit"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: DispensingPaidAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Dispensing fee paid - actual reimbursed dispensing fee"
+    
+    genie:
+      description: "Dispensing fee amount paid to pharmacy by the plan"
+      synonyms: ["dispensing paid", "dispensing fee paid"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: IngredientSubmitAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "PRIMARY COST MEASURE: Ingredient cost submitted"
+    
+    genie:
+      description: "Ingredient cost amount submitted by pharmacy (drug product cost)"
+      synonyms: ["ingredient submit", "drug cost submit", "ingredient cost"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    suggested_measures:
+      - name: "Total Ingredient Cost Submitted"
+        expr: "SUM(IngredientSubmitAmount)"
+
+  - name: IngredientPaidAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "PRIMARY COST MEASURE: Ingredient cost paid"
+    
+    genie:
+      description: "Ingredient cost amount paid to pharmacy by the plan (actual reimbursed drug cost)"
+      synonyms: ["ingredient paid", "drug cost paid", "ingredient reimbursement"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    suggested_measures:
+      - name: "Total Ingredient Cost Paid"
+        expr: "SUM(IngredientPaidAmount)"
+
+  - name: PatientSubmitPaidAmount
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Patient submit paid amount"
+    
+    genie:
+      description: "NEEDS REVIEW: Patient submit paid amount - may be related to member cost share submission"
+      confidence_score: 0.60
+      needs_review: true
+      review_notes: "Unusual that this is INT type instead of decimal - confirm meaning"
+    
+    constraints:
+      nullable: true
+
+  - name: PatientPaidAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Patient paid amount - total member out-of-pocket"
+    
+    genie:
+      description: "Total amount paid by the patient/member (includes copay, coinsurance, deductible)"
+      synonyms: ["patient paid", "member paid", "patient out of pocket"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    suggested_measures:
+      - name: "Total Patient Paid"
+        expr: "SUM(PatientPaidAmount)"
+
+  - name: ProfessionalServiceSubmitAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Professional service fee submitted"
+    
+    genie:
+      description: "Professional service fee submitted (e.g., vaccine administration, counseling)"
+      synonyms: ["professional fee", "service fee"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: UnitCostAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Unit cost - cost per unit of drug"
+    
+    genie:
+      description: "Cost per unit of drug (ingredient cost divided by quantity)"
+      synonyms: ["unit cost", "cost per unit", "per unit cost"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: PaidProfessionalServiceFeeAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Professional service fee paid"
+    
+    genie:
+      description: "Professional service fee amount paid to pharmacy"
+      synonyms: ["professional fee paid", "service fee paid"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: PaidFlatSalesTaxAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Sales tax paid - flat tax amount"
+    
+    genie:
+      description: "Flat sales tax amount paid on the prescription"
+      synonyms: ["sales tax", "tax"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: PaidPercentageSalesTaxAmount
+    data_type: decimal(15,5)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Sales tax paid - percentage-based tax"
+    
+    genie:
+      description: "Percentage-based sales tax amount paid on the prescription"
+      synonyms: ["sales tax", "percentage tax"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: AppliedPeriodicDeductableAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Deductible applied - amount applied to member's deductible"
+    
+    genie:
+      description: "Amount of this claim applied to the member's periodic (e.g., annual) deductible"
+      synonyms: ["deductible", "deductible applied", "deductible amount"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    suggested_measures:
+      - name: "Total Deductible Applied"
+        expr: "SUM(AppliedPeriodicDeductableAmount)"
+
+  - name: CoinsuranceAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Coinsurance amount - member percentage cost share"
+    
+    genie:
+      description: "Coinsurance amount paid by member (percentage of drug cost)"
+      synonyms: ["coinsurance", "member coinsurance", "percentage cost share"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    suggested_measures:
+      - name: "Total Coinsurance"
+        expr: "SUM(CoinsuranceAmount)"
+
+  - name: MaximumAllowableCostPriceAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "MAC price - maximum allowable cost benchmark"
+    
+    genie:
+      description: "Maximum Allowable Cost (MAC) price - plan's maximum reimbursement for generic drugs"
+      synonyms: ["MAC", "MAC price", "maximum allowable cost"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: UsualAndCustomaryChargeAmount
+    data_type: decimal(14,2)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "U&C charge - pharmacy's usual and customary price"
+    
+    genie:
+      description: "Usual and Customary (U&C) charge - pharmacy's standard cash price for the prescription"
+      synonyms: ["U&C", "usual and customary", "cash price", "retail price"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: MaximumAllowableCostReducedCode
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "MAC reduction code - technical pricing field"
+    
+    genie:
+      description: "Code indicating if MAC pricing was reduced or adjusted"
+      confidence_score: 0.70
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  # Pharmacy Network and Service Fields
+  - name: PharmacyServiceLevelCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Service level - indicates pharmacy network tier"
+    
+    genie:
+      description: "Pharmacy service level code - indicates network tier (preferred, standard, non-preferred)"
+      synonyms: ["service level", "network tier", "pharmacy tier"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: CardholderOtherCoverageCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Other coverage code - coordination of benefits indicator"
+    
+    genie:
+      description: "Code indicating cardholder has other coverage (coordination of benefits)"
+      synonyms: ["other coverage", "COB code"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: PharmacyClassCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Pharmacy class - classifies pharmacy type"
+    
+    genie:
+      description: "Pharmacy class code - classifies pharmacy type (retail, mail, specialty, etc.)"
+      synonyms: ["pharmacy class", "pharmacy type"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  # Date Fields (Raw Timestamps)
+  - name: LastRefreshDate
+    data_type: timestamp
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ETL timestamp - technical field"
+    
+    genie:
+      description: "Last refresh/load timestamp for this record"
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: RxSource
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Rx source - indicates prescription origin"
+    
+    genie:
+      description: "Source of the prescription (e.g., written, electronic, phone)"
+      synonyms: ["prescription source", "Rx source"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+# Metric View Recommendations
+metric_view_suggestions:
+  
+  confidence_threshold: 0.70
+  status: "READY - Core pharmacy claims metrics identified"
+  
+  # Primary fact table fields
+  recommended_dimensions:
+    - RxNumber                          # Prescription number
+    - PBMGenericFlag                    # Generic vs brand
+    - CompoundFlag                      # Compound medication
+    - RxClaimReversalFlag               # Reversal indicator
+    - RefillNumber                      # Which refill
+    - DrugStrengthQuantity              # Drug strength
+    - PharmacyDAWCode                   # Dispense as written
+    - DEAClassificationCode             # Controlled substance schedule
+    - TransactionTypeCode               # Transaction type
+    - PatientAge                        # Age at fill
+    - PatientRelationshipCode           # Relationship to subscriber
+  
+  # Core utilization measures
+  utilization_measures:
+    - name: "Total Claims"
+      expr: "COUNT(1)"
+      description: "Total pharmacy claim count"
+      
+    - name: "Total Prescriptions"
+      expr: "COUNT(DISTINCT RxNumber)"
+      description: "Distinct prescription count"
+      
+    - name: "Total Quantity"
+      expr: "SUM(PrescribedQuantity)"
+      description: "Total prescribed quantity"
+      
+    - name: "Total Days Supply"
+      expr: "SUM(DrugDaySupplyCount)"
+      description: "Total days of medication supplied"
+      
+    - name: "Average Days Supply"
+      expr: "AVG(DrugDaySupplyCount)"
+      description: "Average days supply per fill"
+  
+  # Core cost measures
+  cost_measures:
+    - name: "Total Ingredient Cost Paid"
+      expr: "SUM(IngredientPaidAmount)"
+      description: "Total drug ingredient cost paid by plan"
+      
+    - name: "Total Dispensing Fee Paid"
+      expr: "SUM(DispensingPaidAmount)"
+      description: "Total dispensing fees paid to pharmacies"
+      
+    - name: "Total Plan Paid"
+      expr: "SUM(IngredientPaidAmount) + SUM(DispensingPaidAmount)"
+      description: "Total amount paid by plan (ingredient + dispensing)"
+      
+    - name: "Total Member Paid"
+      expr: "SUM(PatientPaidAmount)"
+      description: "Total amount paid by members"
+      
+    - name: "Total Member Copay"
+      expr: "SUM(CopayAmount)"
+      description: "Total member copayments"
+      
+    - name: "Total Coinsurance"
+      expr: "SUM(CoinsuranceAmount)"
+      description: "Total member coinsurance"
+      
+    - name: "Total Deductible Applied"
+      expr: "SUM(AppliedPeriodicDeductableAmount)"
+      description: "Total deductible amounts applied"
+      
+    - name: "Average Cost Per Claim"
+      expr: "SUM(IngredientPaidAmount + DispensingPaidAmount) / COUNT(1)"
+      description: "Average plan cost per claim"
+      
+    - name: "Average Member Cost Per Claim"
+      expr: "SUM(PatientPaidAmount) / COUNT(1)"
+      description: "Average member out-of-pocket per claim"
+  
+  # Ratio measures
+  ratio_measures:
+    - name: "Generic Utilization Rate"
+      expr: "SUM(CASE WHEN PBMGenericFlag = 1 THEN 1 ELSE 0 END) / COUNT(1)"
+      description: "Percentage of claims that are generic"
+      
+    - name: "Member Cost Share Rate"
+      expr: "SUM(PatientPaidAmount) / (SUM(IngredientPaidAmount) + SUM(DispensingPaidAmount) + SUM(PatientPaidAmount))"
+      description: "Member cost as percentage of total"
+  
+  # Supporting foreign keys (for joins, not measures)
+  join_keys:
+    - PharmFactClaimID                  # Primary key
+    - Member_SK                         # Join to member
+    - Pharmacy_SK                       # Join to pharmacy
+    - Ndc_SK                           # Join to drug (NDC)
+    - Practitioner_SK                   # Join to prescriber
+    - FilledDate_Sk                    # Join to date dimension
+    - IncurredDate_SK                  # Join to date dimension
+  
+  recommended_filters:
+    - "RxClaimReversalFlag = 0 OR RxClaimReversalFlag IS NULL"  # Exclude reversals for net costs
+  
+  sample_metric_view_yaml: |
+    version: 1.1
+    source: catalog.schema.fact_pharmacy
+    filter: RxClaimReversalFlag = 0 OR RxClaimReversalFlag IS NULL  # Exclude reversals
+    
+    # Join to dimensions
+    joins:
+      - name: member
+        source: catalog.schema.dim_member
+        on: source.Member_SK = member.Member_SK
+        
+      - name: pharmacy
+        source: catalog.schema.dim_pharmacy
+        on: source.Pharmacy_SK = pharmacy.Pharmacy_SK
+        
+      - name: ndc
+        source: catalog.schema.dim_ndc
+        on: source.Ndc_SK = ndc.Ndc_SK
+        
+      - name: fill_date
+        source: catalog.schema.dim_date
+        on: source.FilledDate_Sk = fill_date.DimensionDate_sk
+    
+    dimensions:
+      - name: Fill Date
+        expr: fill_date.DimensionDate
+        display_name: 'Fill Date'
+        synonyms: ['filled date', 'dispense date', 'date filled']
+        
+      - name: Is Generic
+        expr: PBMGenericFlag
+        display_name: 'Is Generic Drug'
+        synonyms: ['generic', 'generic drug', 'brand vs generic']
+        
+      - name: Days Supply
+        expr: DrugDaySupplyCount
+        display_name: 'Days Supply'
+        synonyms: ['days supply', 'supply days']
+        
+      # Use dimensions from joined tables
+      - name: Drug Name
+        expr: ndc.DrugProductDesc
+        display_name: 'Drug Name'
+        
+      - name: Drug Class
+        expr: ndc.DrugClassDesc
+        display_name: 'Drug Class'
+        
+      - name: Pharmacy Name
+        expr: pharmacy.PharmacyName
+        display_name: 'Pharmacy'
+    
+    measures:
+      - name: claim_count
+        expr: COUNT(1)
+        display_name: 'Total Claims'
+        synonyms: ['claims', 'claim count', 'prescriptions filled']
+        format:
+          type: number
+          decimal_places:
+            type: all
+          hide_group_separator: true
+        
+      - name: total_days_supply
+        expr: SUM(DrugDaySupplyCount)
+        display_name: 'Total Days Supply'
+        synonyms: ['days supply', 'supply days']
+        format:
+          type: number
+          decimal_places:
+            type: all
+        
+      - name: plan_paid
+        expr: SUM(IngredientPaidAmount) + SUM(DispensingPaidAmount)
+        display_name: 'Plan Paid Amount'
+        synonyms: ['plan cost', 'plan paid', 'reimbursement']
+        format:
+          type: currency
+          currency_code: USD
+          decimal_places:
+            type: exact
+            places: 2
+          abbreviation: compact
+        
+      - name: member_paid
+        expr: SUM(PatientPaidAmount)
+        display_name: 'Member Paid Amount'
+        synonyms: ['member cost', 'patient paid', 'out of pocket']
+        format:
+          type: currency
+          currency_code: USD
+          decimal_places:
+            type: exact
+            places: 2
+          abbreviation: compact
+        
+      - name: avg_cost_per_claim
+        expr: (SUM(IngredientPaidAmount) + SUM(DispensingPaidAmount)) / COUNT(1)
+        display_name: 'Average Cost Per Claim'
+        synonyms: ['avg cost', 'average cost', 'cost per claim']
+        format:
+          type: currency
+          currency_code: USD
+          decimal_places:
+            type: exact
+            places: 2
+        
+      - name: generic_rate
+        expr: SUM(CASE WHEN PBMGenericFlag = 1 THEN 1 ELSE 0 END) / COUNT(1)
+        display_name: 'Generic Utilization Rate'
+        synonyms: ['generic rate', 'generic utilization', 'generic %']
+        format:
+          type: percentage
+          decimal_places:
+            type: exact
+            places: 1
+  
+  usage_notes:
+    - "CRITICAL: Filter RxClaimReversalFlag = 0 to exclude reversal claims when calculating net costs"
+    - "Reversal claims have negative amounts - they void previously paid claims"
+    - "FilledDate_Sk is the primary date for trending pharmacy utilization"
+    - "Core cost fields: IngredientPaidAmount, DispensingPaidAmount, PatientPaidAmount"
+    - "PBMGenericFlag critical for generic utilization analysis"
+    - "DrugDaySupplyCount used for adherence metrics (PDC, MPR)"
+    - "Join to dim_ndc for drug classifications and hierarchies"
+    - "Join to dim_pharmacy for pharmacy network and location analysis"
+    - "DEAClassificationCode identifies controlled substances"
+    - "PharmacyDAWCode explains why brand was dispensed when generic available"
+
+  common_use_cases:
+    - "Pharmacy cost trending and forecasting"
+    - "Generic utilization and substitution analysis"
+    - "Medication adherence (using days supply and refill data)"
+    - "High-cost drug identification"
+    - "Pharmacy network performance"
+    - "Brand vs generic cost comparison"
+    - "Member cost share analysis"
+    - "Controlled substance monitoring"
+    - "Specialty pharmacy utilization"
+    - "Mail order vs retail comparison"
+
+# Review Summary
+review_summary:
+  reviewer: "Business User/SME"
+  review_date: "2026-02-09"
+  status: "DRAFT - Comprehensive but may need validation on some cost fields"
+  
+  clarifications_needed:
+    - "Confirm difference between PatientPaidAmount and CopayAmount"
+    - "Clarify PatientSubmitPaidAmount (unusual INT type)"
+    - "Validate all cost field definitions with finance team"
+    - "Confirm if MarketProduct_SK exists (MarketProgram_SK appears deprecated)"
+  
+  next_steps:
+    - "Validate cost field definitions with pharmacy finance team"
+    - "Create sample queries to test cost calculations"
+    - "Document cost reconciliation logic"
+    - "Add specific measure definitions for adherence metrics (PDC, MPR)"

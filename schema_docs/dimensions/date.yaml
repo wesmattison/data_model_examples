@@ -1,0 +1,902 @@
+# Date Dimension Table Schema
+# Status: REVIEWED - Standard date dimension fields
+# Created: 2026-02-09
+
+table:
+  name: catalog.schema.dim_date  # TODO: Update with actual catalog.schema
+  type: dimension
+  description: "Standard date dimension providing comprehensive date attributes for time-based analysis. Includes day, week, month, quarter, year hierarchies plus business calendar information (weekends, holidays). One row per calendar date."
+  grain: "One row per calendar date"
+  source_system: "System-generated date dimension"
+  refresh_frequency: "Annual or as needed to extend date range"
+  
+  primary_key: [DimensionDate_sk]
+  
+  # Natural key is the actual date
+  natural_key: [DimensionDate]
+  
+  data_quality_notes:
+    - "Standard calendar date dimension"
+    - "Includes fiscal/business calendar attributes (SeriesBusinessDay)"
+    - "Weekend and holiday flags for business day calculations"
+    - "Supports ISO week standards"
+
+columns:
+  # Surrogate Key
+  - name: DimensionDate_sk
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "System-generated surrogate key - use for joins to fact tables only"
+    
+    genie:
+      description: "Unique system-generated identifier for each date"
+      synonyms: ["date key"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+      unique: true
+      primary_key: true
+
+  # Primary Date Field
+  - name: DimensionDate
+    data_type: date
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Primary date field - essential for all time-based analysis"
+    
+    genie:
+      description: "Calendar date value"
+      synonyms: ["date", "calendar date", "transaction date"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+      unique: true
+    
+    sample_values: ["2024-01-15", "2024-06-30", "2025-12-31"]
+
+  # Month-Level Fields
+  - name: DimensionMonthDate
+    data_type: date
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "First day of the month - useful for month-level aggregation"
+    
+    genie:
+      description: "First day of the month for the given date (e.g., 2024-01-01 for any date in January 2024)"
+      synonyms: ["month start", "month start date", "first of month"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: ["2024-01-01", "2024-02-01", "2024-03-01"]
+
+  - name: MonthName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Full month name for display"
+    
+    genie:
+      description: "Full name of the month (e.g., 'January', 'February')"
+      synonyms: ["month", "month name"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: ["January", "February", "March", "December"]
+
+  - name: MonthAbbreviatedName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Abbreviated month name for compact display"
+    
+    genie:
+      description: "Three-letter abbreviated month name (e.g., 'Jan', 'Feb', 'Mar')"
+      synonyms: ["month abbr", "month abbreviation"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: ["Jan", "Feb", "Mar", "Dec"]
+
+  - name: CurrentMonthNumber
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Rolling month counter - useful for trending and month-over-month calculations"
+    
+    genie:
+      description: "Sequential month number counting from a baseline (rolling month identifier for trending)"
+      synonyms: ["month number", "month sequence"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: false
+
+  - name: MonthOfYearNumber
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Month number within the year (1-12)"
+    
+    genie:
+      description: "Month number within the year (1=January, 2=February, ..., 12=December)"
+      synonyms: ["month of year", "month number"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: [1, 2, 3, 12]
+
+  - name: MonthYearName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Combined month-year display (e.g., 'Jan 2024')"
+    
+    genie:
+      description: "Month and year combined for display (e.g., 'January 2024' or 'Jan 2024')"
+      synonyms: ["month year", "period"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: ["January 2024", "Feb 2024", "Dec 2025"]
+
+  - name: MonthFirstDayDate
+    data_type: date
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "First day of the month"
+    
+    genie:
+      description: "First day of the month (same as DimensionMonthDate)"
+      synonyms: ["month start", "first day of month"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+
+  - name: MonthLastDayDate
+    data_type: date
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Last day of the month - useful for month-end reporting"
+    
+    genie:
+      description: "Last day of the month (e.g., Jan 31, Feb 28/29, etc.)"
+      synonyms: ["month end", "last day of month", "month end date"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: ["2024-01-31", "2024-02-29", "2024-12-31"]
+
+  - name: PriorMonthLastDayDate
+    data_type: date
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Last day of previous month - useful for comparisons"
+    
+    genie:
+      description: "Last day of the previous month"
+      synonyms: ["prior month end", "previous month end"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  # Quarter-Level Fields
+  - name: DimensionQuarterDate
+    data_type: date
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "First day of the quarter - useful for quarterly aggregation"
+    
+    genie:
+      description: "First day of the calendar quarter (Jan 1, Apr 1, Jul 1, Oct 1)"
+      synonyms: ["quarter start", "quarter start date"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: ["2024-01-01", "2024-04-01", "2024-07-01", "2024-10-01"]
+
+  - name: QuarterName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Quarter display name"
+    
+    genie:
+      description: "Quarter name with year (e.g., 'Q1 2024', 'Q2 2024')"
+      synonyms: ["quarter", "quarter name"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: ["Q1 2024", "Q2 2024", "Q3 2024", "Q4 2024"]
+
+  - name: CurrentQuarterNumber
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Rolling quarter counter - useful for quarter-over-quarter trending"
+    
+    genie:
+      description: "Sequential quarter number counting from a baseline (rolling quarter identifier)"
+      synonyms: ["quarter number", "quarter sequence"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: false
+
+  - name: YearQuarter
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Quarter number within the year (1-4)"
+    
+    genie:
+      description: "Quarter number within the year (1=Q1, 2=Q2, 3=Q3, 4=Q4)"
+      synonyms: ["quarter of year", "quarter number"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: [1, 2, 3, 4]
+
+  - name: QuarterFirstDayDate
+    data_type: date
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "First day of the quarter"
+    
+    genie:
+      description: "First day of the quarter (same as DimensionQuarterDate)"
+      synonyms: ["quarter start"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+
+  - name: QuarterLastDayDate
+    data_type: date
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Last day of the quarter - useful for quarter-end reporting"
+    
+    genie:
+      description: "Last day of the quarter (Mar 31, Jun 30, Sep 30, Dec 31)"
+      synonyms: ["quarter end", "quarter end date"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: ["2024-03-31", "2024-06-30", "2024-09-30", "2024-12-31"]
+
+  # Year-Level Fields
+  - name: DimensionYear
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Calendar year - essential for year-based grouping"
+    
+    genie:
+      description: "Four-digit calendar year (e.g., 2024, 2025)"
+      synonyms: ["year", "calendar year"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: [2023, 2024, 2025, 2026]
+
+  - name: CurrentYearNumber
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Rolling year counter - useful for year-over-year trending"
+    
+    genie:
+      description: "Sequential year number counting from a baseline (rolling year identifier)"
+      synonyms: ["year number", "year sequence"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: false
+
+  - name: YearFirstDayDate
+    data_type: date
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "First day of the year (January 1)"
+    
+    genie:
+      description: "First day of the calendar year (January 1st)"
+      synonyms: ["year start", "first day of year"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: ["2024-01-01", "2025-01-01", "2026-01-01"]
+
+  - name: YearLastDayDate
+    data_type: date
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Last day of the year (December 31)"
+    
+    genie:
+      description: "Last day of the calendar year (December 31st)"
+      synonyms: ["year end", "last day of year", "year end date"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: ["2024-12-31", "2025-12-31", "2026-12-31"]
+
+  - name: YearMonth
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Numeric year-month identifier (YYYYMM format)"
+    
+    genie:
+      description: "Year and month as integer in YYYYMM format (e.g., 202401 for January 2024)"
+      synonyms: ["year month", "YYYYMM", "period"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: [202401, 202402, 202412]
+
+  - name: Year-Month
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Year-month string for display"
+    
+    genie:
+      description: "Year and month formatted as string (e.g., '2024-01', '2024-02')"
+      synonyms: ["year month", "period"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: ["2024-01", "2024-02", "2024-12"]
+
+  # Day-Level Fields
+  - name: DayNumber
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Day of month (1-31)"
+    
+    genie:
+      description: "Day of the month (1-31)"
+      synonyms: ["day", "day of month"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: [1, 15, 28, 31]
+
+  - name: DaySuffixName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Day with ordinal suffix for display (1st, 2nd, 3rd, etc.)"
+    
+    genie:
+      description: "Day of month with ordinal suffix (e.g., '1st', '2nd', '3rd', '15th', '31st')"
+      synonyms: ["day with suffix", "ordinal day"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: ["1st", "2nd", "15th", "31st"]
+
+  - name: DayOfYearNumber
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Day number within the year (1-366)"
+    
+    genie:
+      description: "Day number within the calendar year (1-365 or 1-366 for leap years)"
+      synonyms: ["day of year", "julian day"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: [1, 100, 200, 365]
+
+  - name: CurrentDayNumber
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Rolling day counter - useful for day-over-day trending"
+    
+    genie:
+      description: "Sequential day number counting from a baseline (rolling day identifier)"
+      synonyms: ["day number", "day sequence"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: false
+
+  # Week-Level Fields
+  - name: WeekDayNumber
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Day of week as number (typically 1=Sunday or 1=Monday)"
+    
+    genie:
+      description: "Day of week as number (typically 1-7, where 1=Sunday or 1=Monday depending on system)"
+      synonyms: ["day of week number", "weekday number"]
+      confidence_score: 0.95
+      needs_review: false
+      review_notes: "Confirm if 1=Sunday or 1=Monday in your system"
+    
+    constraints:
+      nullable: false
+    
+    sample_values: [1, 2, 3, 7]
+
+  - name: WeekDayName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Full day name for display"
+    
+    genie:
+      description: "Full name of the day of week (e.g., 'Monday', 'Tuesday', 'Wednesday')"
+      synonyms: ["day name", "day of week", "weekday"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: ["Monday", "Tuesday", "Saturday", "Sunday"]
+
+  - name: WeekDayAbbreviatedName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Abbreviated day name for compact display"
+    
+    genie:
+      description: "Three-letter abbreviated day name (e.g., 'Mon', 'Tue', 'Wed')"
+      synonyms: ["day abbr", "weekday abbreviation"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: ["Mon", "Tue", "Sat", "Sun"]
+
+  - name: ISOWeek
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "ISO week number (1-53) - standard international week numbering"
+    
+    genie:
+      description: "ISO 8601 week number within the year (1-53). ISO weeks start on Monday and the first week contains January 4th."
+      synonyms: ["ISO week", "week number", "week of year"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: [1, 26, 52, 53]
+
+  - name: CaresourceWeek
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Custom business week number specific to organization"
+    
+    genie:
+      description: "Organization-specific week number (may differ from ISO week based on fiscal calendar or business rules)"
+      synonyms: ["business week", "company week", "fiscal week"]
+      confidence_score: 0.90
+      needs_review: false
+      review_notes: "Custom week numbering - may align with fiscal calendar"
+    
+    constraints:
+      nullable: false
+
+  - name: WeekOfYearNumber
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Week number within the year"
+    
+    genie:
+      description: "Week number within the calendar year (1-52 or 1-53)"
+      synonyms: ["week of year", "week number"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: [1, 26, 52]
+
+  - name: WeekOfMonthNumber
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Week number within the month (1-5)"
+    
+    genie:
+      description: "Week number within the month (1-5, depending on how weeks are counted)"
+      synonyms: ["week of month"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: [1, 2, 3, 4, 5]
+
+  - name: WeekFirstDayDate
+    data_type: date
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "First day of the week (typically Sunday or Monday)"
+    
+    genie:
+      description: "First day of the week (typically Sunday or Monday depending on system configuration)"
+      synonyms: ["week start", "week start date"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+
+  - name: WeekLastDayDate
+    data_type: date
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Last day of the week (typically Saturday or Sunday)"
+    
+    genie:
+      description: "Last day of the week (typically Saturday or Sunday depending on system configuration)"
+      synonyms: ["week end", "week end date"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+
+  # Flag Fields
+  - name: WeekendFlag
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Indicator for weekend days - essential for business day filtering"
+    
+    genie:
+      description: "Flag indicating if the date is a weekend (1=weekend, 0=weekday). Typically Saturday and Sunday."
+      synonyms: ["is weekend", "weekend indicator"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: [0, 1]
+
+  - name: HolidayFlag
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Indicator for holidays - essential for business day calculations"
+    
+    genie:
+      description: "Flag indicating if the date is a company-recognized holiday (1=holiday, 0=not holiday)"
+      synonyms: ["is holiday", "holiday indicator"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: [0, 1]
+
+  - name: HolidayName
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Name of the holiday if applicable"
+    
+    genie:
+      description: "Name of the holiday (e.g., 'New Year's Day', 'Independence Day', 'Thanksgiving'). Null if not a holiday."
+      synonyms: ["holiday"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["New Year's Day", "Memorial Day", "Thanksgiving", "Christmas"]
+
+  - name: SeriesBusinessDay
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Business day identifier - excludes weekends and holidays"
+    
+    genie:
+      description: "Sequential business day identifier (excludes weekends and holidays). Used for business day calculations and trending."
+      synonyms: ["business day", "working day", "business day number"]
+      confidence_score: 0.90
+      needs_review: false
+      review_notes: "Confirms whether this excludes both weekends AND holidays"
+    
+    constraints:
+      nullable: true
+
+# Metric View Recommendations
+metric_view_suggestions:
+  
+  confidence_threshold: 0.70
+  status: "READY - Standard date dimension with all common fields"
+  
+  # Core date fields that should almost always be included
+  recommended_dimensions:
+    - DimensionDate           # Primary date field
+    - DimensionYear           # Year
+    - MonthName               # Month name
+    - MonthAbbreviatedName    # Month abbreviation
+    - QuarterName             # Quarter
+    - WeekDayName             # Day of week name
+    - WeekDayAbbreviatedName  # Day abbreviation
+  
+  # Additional useful dimensions
+  commonly_used_dimensions:
+    - DimensionMonthDate      # Month start for grouping
+    - DimensionQuarterDate    # Quarter start for grouping
+    - YearFirstDayDate        # Year start
+    - MonthOfYearNumber       # Month number (1-12)
+    - YearQuarter             # Quarter number (1-4)
+    - WeekendFlag             # Weekend indicator
+    - HolidayFlag             # Holiday indicator
+    - HolidayName             # Holiday name
+    - DayNumber               # Day of month
+  
+  # Specialized fields for specific use cases
+  specialized_dimensions:
+    - ISOWeek                 # ISO week number
+    - CaresourceWeek          # Custom business week
+    - SeriesBusinessDay       # Business day calculations
+    - CurrentDayNumber        # Rolling day counter for trending
+    - CurrentMonthNumber      # Rolling month counter
+    - CurrentQuarterNumber    # Rolling quarter counter
+    - CurrentYearNumber       # Rolling year counter
+    - YearMonth               # YYYYMM numeric format
+  
+  # Supporting field for joins only
+  join_keys:
+    - DimensionDate_sk        # For joining to fact tables
+  
+  recommended_measures: []  # This is a dimension table, not a fact table
+  
+  recommended_filters: []
+  
+  sample_metric_view_yaml: |
+    version: 1.1
+    source: catalog.schema.dim_date
+    
+    dimensions:
+      - name: Date
+        expr: DimensionDate
+        display_name: 'Date'
+        synonyms: ['date', 'calendar date', 'transaction date']
+        format:
+          type: date
+          date_format: year_month_day
+          leading_zeros: true
+        
+      - name: Year
+        expr: DimensionYear
+        display_name: 'Year'
+        synonyms: ['year', 'calendar year']
+        
+      - name: Month
+        expr: MonthName
+        display_name: 'Month'
+        synonyms: ['month', 'month name']
+        
+      - name: Month Abbr
+        expr: MonthAbbreviatedName
+        display_name: 'Month'
+        synonyms: ['month']
+        
+      - name: Quarter
+        expr: QuarterName
+        display_name: 'Quarter'
+        synonyms: ['quarter', 'qtr']
+        
+      - name: Day of Week
+        expr: WeekDayName
+        display_name: 'Day of Week'
+        synonyms: ['day', 'weekday', 'day of week']
+        
+      - name: Is Weekend
+        expr: WeekendFlag
+        display_name: 'Is Weekend'
+        synonyms: ['weekend', 'is weekend']
+        
+      - name: Is Holiday
+        expr: HolidayFlag
+        display_name: 'Is Holiday'
+        synonyms: ['holiday', 'is holiday']
+  
+  usage_notes:
+    - "Standard date dimension - provides comprehensive date attributes"
+    - "When joining to fact tables, use DimensionDate_sk as foreign key"
+    - "WeekendFlag and HolidayFlag are useful for excluding non-business days"
+    - "SeriesBusinessDay provides sequential business day numbering"
+    - "Current*Number fields provide rolling counters for period-over-period analysis"
+    - "First/Last day fields support period boundary calculations"
+    - "CaresourceWeek is organization-specific - may differ from ISO standard"
+
+  common_use_cases:
+    - "Time-based trending and aggregation (daily, weekly, monthly, quarterly, yearly)"
+    - "Business day calculations (excluding weekends and holidays)"
+    - "Period-over-period comparisons (day-over-day, month-over-month, year-over-year)"
+    - "Fiscal vs calendar reporting"
+    - "Seasonality analysis using day of week, month, quarter"
+    - "Holiday impact analysis"
+
+# Review Summary
+review_summary:
+  reviewer: "Business User/SME"
+  review_date: "2026-02-09"
+  status: "COMPLETE"
+  
+  clarifications_received:
+    - "Standard date dimension - self-explanatory fields"
+    - "Includes both calendar and business day attributes"
+    - "CaresourceWeek is organization-specific week numbering"
+  
+  next_steps:
+    - "Ready to use in metric view generation"
+    - "Confirm week start day convention (Sunday vs Monday) if needed"
+    - "Confirm CaresourceWeek business rules if used in reporting"

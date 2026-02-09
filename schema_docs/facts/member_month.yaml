@@ -1,0 +1,1058 @@
+# MemberMonth Fact Table Schema
+# Status: REVIEWED - Member enrollment fact table
+# Created: 2026-02-09
+
+table:
+  name: catalog.schema.fact_membermonth  # TODO: Update with actual catalog.schema
+  type: fact
+  description: "Member month fact table tracking member enrollment status and counts by month. One row per member per month. Used for membership analytics, enrollment trends, and member retention analysis. Contains member counts (new, continuing, termed) and age tracking."
+  grain: "One row per member per month"
+  source_system: "TODO: Identify source system"
+  refresh_frequency: "Monthly"
+  
+  primary_key: [MemberMonth_SK]
+  
+  # Foreign keys to dimensions
+  foreign_keys:
+    - Member_SK           # Links to member dimension
+    - MarketProduct_SK    # Links to market/product dimension
+  
+  data_quality_notes:
+    - "Monthly grain - one record per member per month of enrollment"
+    - "Member counts (New, Continue, Termed) should sum to understand enrollment changes"
+    - "StartOfMonthAge_SK and EndOfMonthAge_SK track member tenure (months enrolled)"
+    - "MarketProgram_SK is deprecated - use MarketProduct_SK instead"
+    - "ACG fields are for clinical segmentation - separate tables exist for detailed ACG analysis"
+
+columns:
+  # Primary Key
+  - name: MemberMonth_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "PRIMARY KEY: Unique identifier for each member-month record"
+    
+    genie:
+      description: "Unique system-generated identifier for each member-month combination"
+      synonyms: ["member month key"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+      unique: true
+      primary_key: true
+
+  # Foreign Keys to Dimensions
+  - name: Member_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "FOREIGN KEY: Links to member dimension - essential for joins but not displayed"
+    
+    genie:
+      description: "Foreign key to member dimension - identifies which member this month record belongs to"
+      synonyms: ["member key"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+      foreign_key: dim_member.Member_SK
+
+  - name: MarketProduct_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "FOREIGN KEY: Links to market/product dimension - essential for joins"
+    
+    genie:
+      description: "Foreign key to market product dimension - identifies the state and insurance program for this enrollment"
+      synonyms: ["market product key"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+      foreign_key: dim_marketproduct.MarketProduct_SK
+
+  # Time Dimension
+  - name: MemberMonthStart
+    data_type: date
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "PRIMARY FIELD: First day of the month - essential for time-based analysis"
+    
+    genie:
+      description: "First day of the month for this member enrollment record (e.g., 2024-01-01 for January 2024)"
+      synonyms: ["month", "enrollment month", "member month", "month start"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: ["2024-01-01", "2024-02-01", "2024-03-01"]
+
+  # Member Count Measures
+  - name: NewMemberCount
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "PRIMARY MEASURE: Count of new member enrollments - critical for enrollment growth analysis"
+    
+    genie:
+      description: "Indicator for new member enrollment this month (1 if member is newly enrolled this month, 0 if not new). Sum to get total new member count."
+      synonyms: ["new members", "new enrollment", "new enrollees", "new adds"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: [0, 1]
+    
+    suggested_measures:
+      - name: "Total New Members"
+        expr: "SUM(NewMemberCount)"
+        description: "Total count of new member enrollments"
+
+  - name: ContinueMemberCount
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "PRIMARY MEASURE: Count of continuing members - essential for retention analysis"
+    
+    genie:
+      description: "Indicator for continuing member (1 if member was enrolled last month and continues this month, 0 if not continuing). Sum to get total continuing member count."
+      synonyms: ["continuing members", "retained members", "continuing enrollment"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: [0, 1]
+    
+    suggested_measures:
+      - name: "Total Continuing Members"
+        expr: "SUM(ContinueMemberCount)"
+        description: "Total count of members who continued enrollment from prior month"
+
+  - name: TermedMemberCount
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "PRIMARY MEASURE: Count of terminated members - critical for churn analysis"
+    
+    genie:
+      description: "Indicator for member termination (1 if member's enrollment ended this month, 0 if not termed). Sum to get total termed member count."
+      synonyms: ["terminated members", "termed members", "disenrollment", "member loss", "churn"]
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: false
+    
+    sample_values: [0, 1]
+    
+    suggested_measures:
+      - name: "Total Termed Members"
+        expr: "SUM(TermedMemberCount)"
+        description: "Total count of members who terminated enrollment this month"
+
+  # Member Age/Tenure Fields
+  - name: StartOfMonthAge_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Member tenure at start of month - useful for retention analysis by tenure"
+    
+    genie:
+      description: "Member tenure (in months) at the start of this month - indicates how long the member has been enrolled. May be a foreign key to an age/tenure dimension."
+      synonyms: ["member tenure", "enrollment tenure", "months enrolled", "start tenure"]
+      confidence_score: 0.90
+      needs_review: false
+      review_notes: "Appears to track enrollment tenure (months as member) rather than demographic age"
+    
+    constraints:
+      nullable: true
+
+  - name: EndOfMonthAge_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Member tenure at end of month - useful for retention analysis"
+    
+    genie:
+      description: "Member tenure (in months) at the end of this month - indicates how long the member has been enrolled by month end. May be a foreign key to an age/tenure dimension."
+      synonyms: ["member tenure", "enrollment tenure", "months enrolled", "end tenure"]
+      confidence_score: 0.90
+      needs_review: false
+      review_notes: "Appears to track enrollment tenure (months as member) rather than demographic age"
+    
+    constraints:
+      nullable: true
+
+  # Deprecated Field
+  - name: MarketProgram_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "DEPRECATED: Older version of MarketProduct_SK - use MarketProduct_SK instead"
+    
+    genie:
+      description: "DEPRECATED: Legacy market/program foreign key - replaced by MarketProduct_SK"
+      confidence_score: 1.0
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    notes: "Deprecated field - do not use in new reports or metric views"
+
+  # ACG Clinical Segmentation Fields
+  # NOTE: All ACG fields excluded from metric view - detailed ACG analysis done in separate tables
+  
+  - name: ACOClassPlan_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate ACG tables"
+    
+    genie:
+      description: "ACG (Adjusted Clinical Groups) class plan - clinical risk segmentation. Detailed ACG analysis available in dedicated ACG tables."
+      confidence_score: 0.70
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACOLookbackClassPlan_Sk
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG lookback class plan - historical clinical risk segmentation"
+      confidence_score: 0.70
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGEndMonthDate
+    data_type: date
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG calculation end month date"
+      confidence_score: 0.70
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGUnscaledRiskValue
+    data_type: decimal(19,9)
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG unscaled risk score - raw clinical risk value before scaling"
+      confidence_score: 0.75
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGChronicConditionCount
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "Count of chronic conditions identified by ACG algorithm"
+      confidence_score: 0.80
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGDialysisService
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG dialysis service indicator"
+      confidence_score: 0.75
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGNursingService
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG nursing service indicator"
+      confidence_score: 0.75
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGMajorProcedure
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG major procedure indicator"
+      confidence_score: 0.75
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGCancerTreatment
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG cancer treatment indicator"
+      confidence_score: 0.80
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGPsychotherapyService
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG psychotherapy service indicator"
+      confidence_score: 0.80
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGMechanicalVentilation
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG mechanical ventilation indicator"
+      confidence_score: 0.80
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGCalSSA
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG CalSSA (California SSA) indicator"
+      confidence_score: 0.60
+      needs_review: true
+    
+    constraints:
+      nullable: true
+
+  - name: ACGResourceUtilizationBand
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG Resource Utilization Band (RUB) - categorical risk grouping from low to very high resource use"
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGUnscaledConcurrentRisk
+    data_type: decimal(19,9)
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG unscaled concurrent risk score"
+      confidence_score: 0.75
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGProbabilityPersistentHighUser
+    data_type: decimal(19,9)
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG probability of being a persistent high utilizer"
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGMajorADGCount
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG Major Aggregated Diagnosis Group count"
+      confidence_score: 0.70
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGHospitalDominantMorbidityTypes
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG hospital dominant morbidity types count"
+      confidence_score: 0.65
+      needs_review: true
+    
+    constraints:
+      nullable: true
+
+  - name: ACGDiagnosesUsed
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "Count of diagnoses used in ACG calculation"
+      confidence_score: 0.80
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGFrailtyFlag
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG frailty indicator flag"
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGActiveIngredientCount
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG count of unique active pharmaceutical ingredients"
+      confidence_score: 0.75
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGUniqueProviderCount
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG count of unique providers seen"
+      confidence_score: 0.80
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGSpecialtyCount
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG count of specialty provider types seen"
+      confidence_score: 0.75
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGGeneralistSeen
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG indicator if member saw a generalist/primary care provider"
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGGeneralistVisitCount
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG count of generalist/primary care visits"
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGManagementVisitCount
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG count of care management visits"
+      confidence_score: 0.75
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGCoordinatedRiskCode
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG coordinated risk code classification"
+      confidence_score: 0.65
+      needs_review: true
+    
+    constraints:
+      nullable: true
+
+  - name: ACGFrailtyConceptCount
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG count of frailty concepts identified"
+      confidence_score: 0.70
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGConcomitantOpioidUser
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG indicator for concomitant opioid use (multiple opioid prescriptions)"
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGChronicOpioidUser
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG indicator for chronic opioid use (long-term opioid therapy)"
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGOpioidDependent
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG indicator for opioid dependency diagnosis"
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: ACGPatientNeedGroup
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: internal_only
+      reason: "ACG clinical segmentation - detailed analysis in separate tables"
+    
+    genie:
+      description: "ACG patient need group classification"
+      confidence_score: 0.70
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  # Additional Member Month Fields
+  - name: DaysInMonth
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Days enrolled in the month - useful for partial month enrollment analysis"
+    
+    genie:
+      description: "Number of days the member was enrolled during this month (1-31 depending on month length and enrollment dates)"
+      synonyms: ["enrollment days", "days enrolled", "member days"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: [28, 29, 30, 31]
+
+  - name: DaysCompleted
+    data_type: int
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Days completed in month - tracks partial month enrollment"
+    
+    genie:
+      description: "Number of days completed/enrolled as of calculation date (useful for in-progress months)"
+      synonyms: ["completed days", "days to date"]
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+
+  - name: MonthDaysRatio
+    data_type: decimal(21,11)
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: measure_candidate
+      reason: "Enrollment ratio - useful for prorating costs/utilization for partial months"
+    
+    genie:
+      description: "Ratio of days enrolled to total days in month (DaysInMonth / days in calendar month). Used for prorating metrics for partial month enrollment."
+      synonyms: ["enrollment ratio", "proration factor", "member month fraction"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: [0.5, 0.8, 1.0]
+    
+    notes: "1.0 = full month enrollment, <1.0 = partial month"
+
+  - name: MemberAidCategory_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "Foreign key to member aid category dimension"
+    
+    genie:
+      description: "Foreign key to member aid category dimension (may classify member eligibility category, aid type, etc.)"
+      confidence_score: 0.70
+      needs_review: true
+    
+    constraints:
+      nullable: true
+
+  - name: COBFlag
+    data_type: string
+    
+    exposure:
+      include_in_metric_view: true
+      usage_category: dimension_candidate
+      reason: "Coordination of Benefits indicator - useful for identifying members with other insurance"
+    
+    genie:
+      description: "Coordination of Benefits (COB) flag - indicates if member has other insurance coverage (primary or secondary)"
+      synonyms: ["COB", "coordination of benefits", "other insurance", "dual coverage"]
+      confidence_score: 0.95
+      needs_review: false
+    
+    constraints:
+      nullable: true
+    
+    sample_values: ["Y", "N", null]
+
+  - name: AssignedProvider_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "Foreign key to assigned/attributed provider"
+    
+    genie:
+      description: "Foreign key to provider dimension - identifies the member's assigned or attributed primary care provider"
+      synonyms: ["PCP", "attributed provider"]
+      confidence_score: 0.90
+      needs_review: false
+    
+    constraints:
+      nullable: true
+      foreign_key: dim_provider.Provider_SK
+
+  - name: AttributedProvider_SK
+    data_type: bigint
+    
+    exposure:
+      include_in_metric_view: false
+      usage_category: surrogate_key
+      reason: "Foreign key to attributed provider (may duplicate AssignedProvider_SK)"
+    
+    genie:
+      description: "Foreign key to provider dimension - member's attributed provider (may differ from assigned provider based on attribution methodology)"
+      confidence_score: 0.85
+      needs_review: false
+    
+    constraints:
+      nullable: true
+      foreign_key: dim_provider.Provider_SK
+
+# Metric View Recommendations
+metric_view_suggestions:
+  
+  confidence_threshold: 0.70
+  status: "READY - Core enrollment metrics identified, ACG fields excluded per business rules"
+  
+  # Primary fact table fields for enrollment analysis
+  recommended_dimensions:
+    - MemberMonthStart              # Month date - TIME DIMENSION
+    - COBFlag                        # Coordination of benefits indicator
+  
+  # Core enrollment measures
+  recommended_measures:
+    - name: "Total Members"
+      expr: "COUNT(DISTINCT Member_SK)"
+      description: "Distinct count of members enrolled in the period"
+      
+    - name: "Total Member Months"
+      expr: "COUNT(1)"
+      description: "Count of member month records (member months of enrollment)"
+      
+    - name: "New Members"
+      expr: "SUM(NewMemberCount)"
+      description: "Count of new member enrollments"
+      
+    - name: "Continuing Members"
+      expr: "SUM(ContinueMemberCount)"
+      description: "Count of continuing members (retained from prior month)"
+      
+    - name: "Termed Members"
+      expr: "SUM(TermedMemberCount)"
+      description: "Count of member terminations"
+      
+    - name: "Enrollment Days"
+      expr: "SUM(DaysInMonth)"
+      description: "Total member days of enrollment"
+      
+    - name: "Average Member Months Enrolled"
+      expr: "SUM(DaysInMonth) / 30.0"
+      description: "Member months adjusted for partial enrollment (30-day standard)"
+  
+  # Optional tenure-based measures
+  tenure_measures:
+    - name: "Average Member Tenure"
+      expr: "AVG(EndOfMonthAge_SK)"
+      description: "Average months of enrollment tenure"
+  
+  # Supporting foreign keys (for joins, not measures)
+  join_keys:
+    - MemberMonth_SK                # Primary key
+    - Member_SK                     # Join to member dimension
+    - MarketProduct_SK              # Join to market/product dimension
+    - AssignedProvider_SK           # Join to provider dimension (optional)
+    - AttributedProvider_SK         # Join to provider dimension (optional)
+  
+  # Fields explicitly excluded per business rules
+  excluded_fields:
+    - MarketProgram_SK              # Deprecated
+    - All ACG fields                # Clinical segmentation - separate analysis tables exist
+  
+  recommended_filters: []
+  
+  sample_metric_view_yaml: |
+    version: 1.1
+    source: catalog.schema.fact_membermonth
+    
+    # Join to dimensions
+    joins:
+      - name: member
+        source: catalog.schema.dim_member
+        on: source.Member_SK = member.Member_SK
+        
+      - name: market_product
+        source: catalog.schema.dim_marketproduct
+        on: source.MarketProduct_SK = market_product.MarketProduct_SK
+        
+      - name: date_dim
+        source: catalog.schema.dim_date
+        on: source.MemberMonthStart = date_dim.DimensionDate
+    
+    dimensions:
+      - name: Month
+        expr: MemberMonthStart
+        display_name: 'Enrollment Month'
+        synonyms: ['month', 'enrollment month', 'member month']
+        format:
+          type: date
+          date_format: year_month_day
+        
+      - name: Has Other Insurance
+        expr: COBFlag
+        display_name: 'Has Other Insurance (COB)'
+        synonyms: ['COB', 'coordination of benefits', 'other insurance']
+        
+      # Use dimensions from joined tables
+      - name: State
+        expr: market_product.MarketDesc
+        display_name: 'State'
+        
+      - name: Program
+        expr: market_product.ProgramDesc
+        display_name: 'Insurance Program'
+    
+    measures:
+      - name: total_members
+        expr: COUNT(DISTINCT Member_SK)
+        display_name: 'Total Members'
+        synonyms: ['members', 'member count', 'enrollment']
+        format:
+          type: number
+          decimal_places:
+            type: all
+          hide_group_separator: true
+        
+      - name: member_months
+        expr: COUNT(1)
+        display_name: 'Member Months'
+        synonyms: ['member months', 'enrollment months']
+        format:
+          type: number
+          decimal_places:
+            type: all
+          hide_group_separator: true
+        
+      - name: new_members
+        expr: SUM(NewMemberCount)
+        display_name: 'New Members'
+        synonyms: ['new enrollment', 'new adds', 'new members']
+        format:
+          type: number
+          decimal_places:
+            type: all
+        
+      - name: continuing_members
+        expr: SUM(ContinueMemberCount)
+        display_name: 'Continuing Members'
+        synonyms: ['continuing', 'retained members']
+        format:
+          type: number
+          decimal_places:
+            type: all
+        
+      - name: termed_members
+        expr: SUM(TermedMemberCount)
+        display_name: 'Termed Members'
+        synonyms: ['terminations', 'disenrollment', 'churn']
+        format:
+          type: number
+          decimal_places:
+            type: all
+        
+      - name: retention_rate
+        expr: SUM(ContinueMemberCount) / (SUM(ContinueMemberCount) + SUM(TermedMemberCount))
+        display_name: 'Retention Rate'
+        synonyms: ['retention', 'retention percentage']
+        format:
+          type: percentage
+          decimal_places:
+            type: exact
+            places: 2
+  
+  usage_notes:
+    - "Member month grain - one record per member per month of enrollment"
+    - "Sum NewMemberCount, ContinueMemberCount, TermedMemberCount for enrollment trends"
+    - "COUNT(DISTINCT Member_SK) for unique member count in a period"
+    - "COUNT(1) for total member months (enrollment volume)"
+    - "DaysInMonth and MonthDaysRatio useful for prorating partial month enrollment"
+    - "StartOfMonthAge_SK and EndOfMonthAge_SK track member tenure (months enrolled)"
+    - "MarketProgram_SK is deprecated - always use MarketProduct_SK"
+    - "All ACG fields excluded from metric views - dedicated ACG analysis tables exist"
+    - "COBFlag indicates members with other insurance (coordination of benefits)"
+
+  common_use_cases:
+    - "Enrollment trends - new adds, terminations, net change by month"
+    - "Retention analysis - continuation rates, churn rates by program/state"
+    - "Member tenure analysis - enrollment longevity, retention by tenure cohort"
+    - "Geographic enrollment - member distribution by state, county, ZIP"
+    - "Program mix - enrollment by insurance program (Medicaid, Medicare, etc.)"
+    - "Partial month enrollment - prorated metrics using DaysInMonth or MonthDaysRatio"
+    - "COB analysis - members with other insurance coverage"
+
+# Review Summary
+review_summary:
+  reviewer: "Business User/SME"
+  review_date: "2026-02-09"
+  status: "COMPLETE"
+  
+  clarifications_received:
+    - "Core enrollment fields: Member_SK, MarketProduct_SK, MemberMonthStart, New/Continue/Termed counts"
+    - "StartOfMonthAge_SK and EndOfMonthAge_SK track member tenure (months enrolled), not demographic age"
+    - "MarketProgram_SK is deprecated - use MarketProduct_SK instead"
+    - "All ACG fields excluded from metric views - too detailed, separate ACG analysis tables exist"
+    - "DaysInMonth and MonthDaysRatio support partial month enrollment analysis"
+  
+  next_steps:
+    - "Ready to use in enrollment metric view generation"
+    - "ACG fields documented but excluded from metric views per business rules"
+    - "Consider creating separate member tenure dimension for Age_SK fields"
