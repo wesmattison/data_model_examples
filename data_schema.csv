@@ -1,0 +1,294 @@
+table_name,field_name,include_in_metric_view,usage_category,description
+catalog.schema.dim_date,DimensionDate_sk,False,surrogate_key,Unique system-generated identifier for each date
+catalog.schema.dim_date,DimensionDate,True,dimension_candidate,Calendar date value
+catalog.schema.dim_date,DimensionMonthDate,True,dimension_candidate,"First day of the month for the given date (e.g., 2024-01-01 for any date in January 2024)"
+catalog.schema.dim_date,MonthName,True,dimension_candidate,"Full name of the month (e.g., 'January', 'February')"
+catalog.schema.dim_date,MonthAbbreviatedName,True,dimension_candidate,"Three-letter abbreviated month name (e.g., 'Jan', 'Feb', 'Mar')"
+catalog.schema.dim_date,CurrentMonthNumber,True,dimension_candidate,Sequential month number counting from a baseline (rolling month identifier for trending)
+catalog.schema.dim_date,MonthOfYearNumber,True,dimension_candidate,"Month number within the year (1=January, 2=February, ..., 12=December)"
+catalog.schema.dim_date,MonthYearName,True,dimension_candidate,"Month and year combined for display (e.g., 'January 2024' or 'Jan 2024')"
+catalog.schema.dim_date,MonthFirstDayDate,True,dimension_candidate,First day of the month (same as DimensionMonthDate)
+catalog.schema.dim_date,MonthLastDayDate,True,dimension_candidate,"Last day of the month (e.g., Jan 31, Feb 28/29, etc.)"
+catalog.schema.dim_date,PriorMonthLastDayDate,True,dimension_candidate,Last day of the previous month
+catalog.schema.dim_date,DimensionQuarterDate,True,dimension_candidate,"First day of the calendar quarter (Jan 1, Apr 1, Jul 1, Oct 1)"
+catalog.schema.dim_date,QuarterName,True,dimension_candidate,"Quarter name with year (e.g., 'Q1 2024', 'Q2 2024')"
+catalog.schema.dim_date,CurrentQuarterNumber,True,dimension_candidate,Sequential quarter number counting from a baseline (rolling quarter identifier)
+catalog.schema.dim_date,YearQuarter,True,dimension_candidate,"Quarter number within the year (1=Q1, 2=Q2, 3=Q3, 4=Q4)"
+catalog.schema.dim_date,QuarterFirstDayDate,True,dimension_candidate,First day of the quarter (same as DimensionQuarterDate)
+catalog.schema.dim_date,QuarterLastDayDate,True,dimension_candidate,"Last day of the quarter (Mar 31, Jun 30, Sep 30, Dec 31)"
+catalog.schema.dim_date,DimensionYear,True,dimension_candidate,"Four-digit calendar year (e.g., 2024, 2025)"
+catalog.schema.dim_date,CurrentYearNumber,True,dimension_candidate,Sequential year number counting from a baseline (rolling year identifier)
+catalog.schema.dim_date,YearFirstDayDate,True,dimension_candidate,First day of the calendar year (January 1st)
+catalog.schema.dim_date,YearLastDayDate,True,dimension_candidate,Last day of the calendar year (December 31st)
+catalog.schema.dim_date,YearMonth,True,dimension_candidate,"Year and month as integer in YYYYMM format (e.g., 202401 for January 2024)"
+catalog.schema.dim_date,Year-Month,True,dimension_candidate,"Year and month formatted as string (e.g., '2024-01', '2024-02')"
+catalog.schema.dim_date,DayNumber,True,dimension_candidate,Day of the month (1-31)
+catalog.schema.dim_date,DaySuffixName,True,dimension_candidate,"Day of month with ordinal suffix (e.g., '1st', '2nd', '3rd', '15th', '31st')"
+catalog.schema.dim_date,DayOfYearNumber,True,dimension_candidate,Day number within the calendar year (1-365 or 1-366 for leap years)
+catalog.schema.dim_date,CurrentDayNumber,True,dimension_candidate,Sequential day number counting from a baseline (rolling day identifier)
+catalog.schema.dim_date,WeekDayNumber,True,dimension_candidate,"Day of week as number (typically 1-7, where 1=Sunday or 1=Monday depending on system)"
+catalog.schema.dim_date,WeekDayName,True,dimension_candidate,"Full name of the day of week (e.g., 'Monday', 'Tuesday', 'Wednesday')"
+catalog.schema.dim_date,WeekDayAbbreviatedName,True,dimension_candidate,"Three-letter abbreviated day name (e.g., 'Mon', 'Tue', 'Wed')"
+catalog.schema.dim_date,ISOWeek,True,dimension_candidate,ISO 8601 week number within the year (1-53). ISO weeks start on Monday and the first week contains January 4th.
+catalog.schema.dim_date,CaresourceWeek,True,dimension_candidate,Organization-specific week number (may differ from ISO week based on fiscal calendar or business rules)
+catalog.schema.dim_date,WeekOfYearNumber,True,dimension_candidate,Week number within the calendar year (1-52 or 1-53)
+catalog.schema.dim_date,WeekOfMonthNumber,True,dimension_candidate,"Week number within the month (1-5, depending on how weeks are counted)"
+catalog.schema.dim_date,WeekFirstDayDate,True,dimension_candidate,First day of the week (typically Sunday or Monday depending on system configuration)
+catalog.schema.dim_date,WeekLastDayDate,True,dimension_candidate,Last day of the week (typically Saturday or Sunday depending on system configuration)
+catalog.schema.dim_date,WeekendFlag,True,dimension_candidate,"Flag indicating if the date is a weekend (1=weekend, 0=weekday). Typically Saturday and Sunday."
+catalog.schema.dim_date,HolidayFlag,True,dimension_candidate,"Flag indicating if the date is a company-recognized holiday (1=holiday, 0=not holiday)"
+catalog.schema.dim_date,HolidayName,True,dimension_candidate,"Name of the holiday (e.g., 'New Year's Day', 'Independence Day', 'Thanksgiving'). Null if not a holiday."
+catalog.schema.dim_date,SeriesBusinessDay,True,dimension_candidate,Sequential business day identifier (excludes weekends and holidays). Used for business day calculations and trending.
+catalog.schema.marketproduct,MarketProduct_SK,False,surrogate_key,Unique system-generated identifier for each market-product combination
+catalog.schema.marketproduct,ClientID,True,natural_key,"NEEDS REVIEW: Client identifier - unclear if this refers to customer, account, or organizational unit"
+catalog.schema.marketproduct,MarketCode,True,dimension_candidate,Two-letter US state code representing the geographic market
+catalog.schema.marketproduct,MarketDesc,True,dimension_candidate,Full US state name for the market
+catalog.schema.marketproduct,ProductCode,True,dimension_candidate,Code/identifier for the insurance product brand (pairs with ProductDesc)
+catalog.schema.marketproduct,ProductDesc,True,dimension_candidate,"Brand name of the insurance product offering (e.g., specific plan names or product lines marketed to customers)"
+catalog.schema.marketproduct,SubProductCode,True,dimension_candidate,Code representing a sub-category or variant of the product
+catalog.schema.marketproduct,SubProductDesc,True,dimension_candidate,Descriptive name for the sub-product code
+catalog.schema.marketproduct,MarketSubProductCode,True,dimension_candidate,NEEDS REVIEW: Composite code combining market and sub-product - unclear if this is concatenated or represents a separate classification
+catalog.schema.marketproduct,ParentGroupSyskey,False,internal_only,System-generated identifier for parent group level - LEGACY/UNUSED
+catalog.schema.marketproduct,ParentGroupID,False,internal_only,Parent group business identifier - LEGACY/UNUSED
+catalog.schema.marketproduct,ParentGroupName,False,internal_only,Parent group name - LEGACY/UNUSED
+catalog.schema.marketproduct,GroupSysKey,False,internal_only,System-generated identifier for group level - LEGACY/UNUSED
+catalog.schema.marketproduct,GroupID,False,internal_only,Group business identifier - LEGACY/UNUSED
+catalog.schema.marketproduct,GroupName,False,internal_only,Group name - LEGACY/UNUSED
+catalog.schema.marketproduct,SubgroupSysKey,False,internal_only,System-generated identifier for subgroup level - LEGACY/UNUSED
+catalog.schema.marketproduct,SubgroupID,False,internal_only,Subgroup business identifier - LEGACY/UNUSED
+catalog.schema.marketproduct,SubgroupName,False,internal_only,Subgroup name - LEGACY/UNUSED
+catalog.schema.marketproduct,SubProgramCode,False,internal_only,Sub-program code - LEGACY/UNUSED
+catalog.schema.marketproduct,SubProgramDesc,False,internal_only,Sub-program description - LEGACY/UNUSED
+catalog.schema.marketproduct,ClassPlanID,True,dimension_candidate,NEEDS REVIEW: Identifier for classification plan - unclear purpose and business meaning
+catalog.schema.marketproduct,ClassPlanDesc,True,dimension_candidate,Descriptive name for the classification plan
+catalog.schema.marketproduct,ProductID,True,natural_key,NEEDS REVIEW: Product identifier - unclear how this differs from ProductCode
+catalog.schema.marketproduct,PlanProductDesc,True,dimension_candidate,NEEDS REVIEW: Product description potentially related to ClassPlanID - unclear relationship
+catalog.schema.marketproduct,ProductCategoryCode,True,dimension_candidate,Code representing the product category
+catalog.schema.marketproduct,ProductCategoryDesc,True,dimension_candidate,Descriptive name for the product category
+catalog.schema.marketproduct,MinAge,True,dimension_candidate,"NEEDS REVIEW: Minimum age value - unclear if this is customer age, product age rating, or other age-related attribute"
+catalog.schema.marketproduct,MaxAge,True,dimension_candidate,NEEDS REVIEW: Maximum age value - unclear context (see MinAge)
+catalog.schema.marketproduct,PFKIndicator,False,internal_only,"UNKNOWN: PFK Indicator - acronym meaning unclear, purpose unknown"
+catalog.schema.dim_ndc,Ndc_SK,False,surrogate_key,Unique system-generated identifier for each NDC
+catalog.schema.dim_ndc,NDCCode,True,natural_key,National Drug Code (NDC) - a unique 10 or 11-digit identifier assigned by the FDA to each drug product. Format: labeler code + product code + package code.
+catalog.schema.dim_ndc,DrugProductDesc,True,dimension_candidate,"Full drug product description including brand/generic name, strength, and form (e.g., 'Lipitor 20mg Tablet', 'Amoxicillin 500mg Capsule')"
+catalog.schema.dim_ndc,DrugLabelName,True,dimension_candidate,Drug label name - typically the brand or marketing name shown on the drug label
+catalog.schema.dim_ndc,DrugGenericName,True,dimension_candidate,"Generic (non-proprietary) name of the drug (e.g., 'atorvastatin' for Lipitor, 'metformin' for Glucophage)"
+catalog.schema.dim_ndc,DrugBaseNameCode,True,dimension_candidate,NEEDS REVIEW: Code representing the base drug name (likely groups different strengths/forms of the same drug)
+catalog.schema.dim_ndc,DrugNameExtensionCode,False,internal_only,NEEDS REVIEW: Drug name extension code - purpose unclear
+catalog.schema.dim_ndc,DrugNameExtensionDesc,False,internal_only,NEEDS REVIEW: Description for DrugNameExtensionCode
+catalog.schema.dim_ndc,DrugNameDoseFormCode,True,dimension_candidate,"Code for drug dosage form (e.g., tablet, capsule, syrup, injection)"
+catalog.schema.dim_ndc,DrugNameDoseFormDesc,True,dimension_candidate,"Description of drug dosage form (e.g., 'Tablet', 'Capsule', 'Oral Syrup', 'Injection')"
+catalog.schema.dim_ndc,DrugManufacturerId,True,dimension_candidate,Unique identifier for the drug manufacturer (labeler code from NDC)
+catalog.schema.dim_ndc,DrugManufacturerName,True,dimension_candidate,"Name of the drug manufacturer or labeler (e.g., 'Pfizer', 'Teva Pharmaceuticals', 'CVS Pharmacy')"
+catalog.schema.dim_ndc,DrugSuperGroupCode,True,dimension_candidate,NEEDS REVIEW: Highest level of drug classification hierarchy - likely therapeutic category
+catalog.schema.dim_ndc,DrugSuperGroupDesc,True,dimension_candidate,Description of the drug super group classification
+catalog.schema.dim_ndc,DrugGroupCode,True,dimension_candidate,NEEDS REVIEW: Mid-level drug classification - likely therapeutic subclass
+catalog.schema.dim_ndc,DrugGroupDesc,True,dimension_candidate,Description of the drug group classification
+catalog.schema.dim_ndc,DrugClassCode,True,dimension_candidate,"Drug class code - therapeutic classification (e.g., antihypertensives, antibiotics, antidiabetics)"
+catalog.schema.dim_ndc,DrugClassDesc,True,dimension_candidate,"Description of drug therapeutic class (e.g., 'Beta Blockers', 'Statins', 'ACE Inhibitors')"
+catalog.schema.dim_ndc,DrugSubClassCode,True,dimension_candidate,Drug subclass code - more detailed therapeutic classification under drug class
+catalog.schema.dim_ndc,DrugSubClassDesc,True,dimension_candidate,Description of drug subclass - detailed therapeutic category
+catalog.schema.dim_ndc,MediSpanDEAClassCode,True,dimension_candidate,DEA (Drug Enforcement Administration) schedule classification code for controlled substances (Schedule I-V). Empty for non-controlled drugs.
+catalog.schema.dim_ndc,DatabaseCode,False,internal_only,NEEDS REVIEW: Internal database or system code
+catalog.schema.dim_ndc,OTCCode,True,dimension_candidate,Code indicating if drug is available over-the-counter (OTC) vs prescription-only
+catalog.schema.dim_ndc,UnitOfMeasureCode,True,dimension_candidate,"Unit of measure code for the drug (e.g., tablet, ml, gm, capsule, vial)"
+catalog.schema.dim_ndc,MaintenanceDrugCode,True,dimension_candidate,Code indicating if drug is classified as a maintenance medication (chronic condition drugs taken regularly vs acute/short-term)
+catalog.schema.dim_ndc,MaintenanceDrugDesc,True,dimension_candidate,Description indicating if drug is for maintenance therapy
+catalog.schema.dim_ndc,MaintenanceDrugFlag,True,dimension_candidate,"Custom flag indicating maintenance drug status (1=maintenance, 0=not maintenance). Maintenance drugs are for chronic conditions requiring ongoing therapy."
+catalog.schema.dim_ndc,BrandProductFlag,True,dimension_candidate,Custom flag indicating if drug is brand name (1) or generic (0). Used for brand vs generic utilization and cost analysis.
+catalog.schema.dim_ndc,ControlledSubstanceFlag,True,dimension_candidate,"Custom flag indicating if drug is a DEA-controlled substance (1=controlled, 0=not controlled). Includes opioids, stimulants, benzodiazepines, etc."
+catalog.schema.dim_ndc,SpecialtyFlag,True,dimension_candidate,"Custom flag indicating if drug is classified as specialty medication (1=specialty, 0=traditional). Specialty drugs are typically high-cost, treat complex conditions, require special handling."
+catalog.schema.dim_ndc,GPINumber,True,dimension_candidate,Generic Product Identifier (GPI) - a 14-character hierarchical classification system used to identify drugs by therapeutic class and ingredients
+catalog.schema.dim_ndc,StartDate,False,internal_only,Effective start date for this NDC record
+catalog.schema.dim_ndc,EndDate,False,internal_only,Effective end date for this NDC record (null if currently active)
+catalog.schema.dim_ndc,MediSpanDrugProductName,True,dimension_candidate,MediSpan's standardized drug product name
+catalog.schema.dim_ndc,MediSpanDrugProductGenericName,True,dimension_candidate,MediSpan's standardized generic drug name
+catalog.schema.dim_ndc,MediSpanDrugProductShortDesc,True,dimension_candidate,MediSpan's abbreviated drug product description
+catalog.schema.dim_ndc,MedispanDrugAWPPriceTypeCode,False,internal_only,Code indicating the type of Average Wholesale Price (AWP) for pricing calculations
+catalog.schema.dim_ndc,MedispanDrugAWPUnitPriceAmount,True,measure_candidate,Average Wholesale Price (AWP) per unit - industry benchmark pricing
+catalog.schema.dim_ndc,MedispanDrugAWPPackagePriceAmount,True,measure_candidate,Average Wholesale Price (AWP) for the entire package
+catalog.schema.dim_ndc,FDATherapeuticClassCode,True,dimension_candidate,FDA therapeutic class code - official FDA classification system
+catalog.schema.dim_ndc,FDATherapeuticClassDesc,True,dimension_candidate,FDA therapeutic class description
+catalog.schema.dim_pharmacy,Pharmacy_Sk,False,surrogate_key,Unique system-generated identifier for each pharmacy location
+catalog.schema.dim_pharmacy,PharmacyNCPDPID,True,natural_key,National Council for Prescription Drug Programs (NCPDP) provider ID - a unique 7-digit identifier assigned to each pharmacy location in the United States
+catalog.schema.dim_pharmacy,PharmacyNPI,True,natural_key,National Provider Identifier (NPI) - a unique 10-digit identification number for the pharmacy as a healthcare provider
+catalog.schema.dim_pharmacy,PharmacyTaxIDNumber,True,natural_key,Federal Tax Identification Number (EIN/TIN) for the pharmacy organization
+catalog.schema.dim_pharmacy,PharmacyDEANumber,True,natural_key,Drug Enforcement Administration (DEA) registration number - required for pharmacies that dispense controlled substances
+catalog.schema.dim_pharmacy,PharmacyName,True,dimension_candidate,"Name of the pharmacy location (e.g., 'CVS Pharmacy #1234', 'Walgreens Store 5678', 'ABC Community Pharmacy')"
+catalog.schema.dim_pharmacy,PharmacyAddress,True,dimension_candidate,Primary street address of the pharmacy location
+catalog.schema.dim_pharmacy,PharmacyAddress2,True,dimension_candidate,"Secondary address line (suite, unit, building number, etc.)"
+catalog.schema.dim_pharmacy,PharmacyCity,True,dimension_candidate,City where the pharmacy is located
+catalog.schema.dim_pharmacy,PharmacyCounty,True,dimension_candidate,County where the pharmacy is located
+catalog.schema.dim_pharmacy,PharmacyStateCode,True,dimension_candidate,Two-letter US state code where the pharmacy is located
+catalog.schema.dim_pharmacy,PharmacyPostalCode,True,dimension_candidate,US Postal ZIP code for the pharmacy location (5-digit or ZIP+4 format)
+catalog.schema.dim_pharmacy,PharmacyGroup,True,dimension_candidate,"Pharmacy chain or group affiliation (e.g., 'CVS', 'Walgreens', 'Independent', 'Regional Chain')"
+catalog.schema.dim_pharmacy,DispenserClassCode,True,dimension_candidate,"Code classifying the type of pharmacy dispenser (e.g., retail, mail order, specialty, long-term care, clinic)"
+catalog.schema.dim_pharmacy,DispenserClassCodeDescription,True,dimension_candidate,"Description of pharmacy dispenser type (e.g., 'Retail Pharmacy', 'Mail Order Pharmacy', 'Specialty Pharmacy', 'Long-term Care Pharmacy')"
+catalog.schema.provider,Provider_SK,False,surrogate_key,Unique system-generated identifier for each provider
+catalog.schema.provider,ProviderNPI,True,natural_key,National Provider Identifier (NPI) - a unique 10-digit identification number issued by CMS to healthcare providers in the United States
+catalog.schema.provider,ProviderFederalTaxID,True,natural_key,Federal Employer Identification Number (EIN/TIN) for the provider organization
+catalog.schema.provider,ProviderTaxID,True,natural_key,Provider Tax Identification Number - may be individual provider SSN or organizational EIN depending on provider type
+catalog.schema.provider,ProviderName,True,dimension_candidate,Provider name (individual doctor name or facility/organization name)
+catalog.schema.provider,ProviderTaxIDName,True,dimension_candidate,Legal business name associated with the provider's Tax ID (often the organization or practice name)
+catalog.schema.provider,ProviderTypeDesc,True,dimension_candidate,"Type or category of provider (e.g., Individual, Organization, Hospital, Clinic, Pharmacy)"
+catalog.schema.provider,ProviderSpecialtyDesc,True,dimension_candidate,"Primary medical specialty of the provider (e.g., Cardiology, Pediatrics, Family Medicine, Orthopedic Surgery)"
+catalog.schema.provider,ProviderSecondarySpecialtyDesc,True,dimension_candidate,Secondary or additional medical specialty of the provider
+catalog.schema.fact_member,Member_SK,False,surrogate_key,Unique system-generated identifier for each member
+catalog.schema.fact_member,MemberSysKey,False,internal_only,System-generated member key - legacy or internal identifier
+catalog.schema.fact_member,Subscriber_SK,False,surrogate_key,Surrogate key for subscriber/policyholder - links member to their subscriber (primary policy holder)
+catalog.schema.fact_member,SubscriberID,True,natural_key,Subscriber ID - primary member/policyholder identifier used in claims and enrollment systems
+catalog.schema.fact_member,SubscriberIDMemberIDSuffixNumber,True,natural_key,"Combined identifier: Subscriber ID + Member Suffix (e.g., SUB123456-01). Uniquely identifies member including dependents under same subscriber."
+catalog.schema.fact_member,MemberIDSuffixNumber,True,dimension_candidate,"Member ID suffix number (0=subscriber/policyholder, 1-99=dependents). Identifies relationship to subscriber."
+catalog.schema.fact_member,MemberSubscriberRelationshipCode,True,dimension_candidate,"Code indicating member's relationship to subscriber (e.g., '01'=Self/Subscriber, '02'=Spouse, '03'=Child)"
+catalog.schema.fact_member,SubscriberMedicaidID,True,natural_key,State Medicaid identifier for the subscriber/member
+catalog.schema.fact_member,SubscriberMedicareID,True,natural_key,Medicare Health Insurance Claim Number (HICN) or MBI (Medicare Beneficiary Identifier) for the subscriber/member
+catalog.schema.fact_member,MemberStandardUniqueHealthID,True,natural_key,Standardized unique health identifier - may be enterprise member ID or state-specific identifier
+catalog.schema.fact_member,MemberName,False,internal_only,"Full member name - PROTECTED PII, not for metric view exposure"
+catalog.schema.fact_member,MemberFirstName,False,internal_only,"Member first name - PROTECTED PII, not for metric view exposure"
+catalog.schema.fact_member,MemberMiddleInitial,False,internal_only,"Member middle initial - PROTECTED PII, not for metric view exposure"
+catalog.schema.fact_member,MemberLastName,False,internal_only,"Member last name - PROTECTED PII, not for metric view exposure"
+catalog.schema.fact_member,MemberBirthDate,True,dimension_candidate,Member date of birth - used to calculate member age and age groups
+catalog.schema.fact_member,MemberGenderCode,True,dimension_candidate,"Member gender code (e.g., 'M'=Male, 'F'=Female, 'U'=Unknown)"
+catalog.schema.fact_member,MemberAddress,False,internal_only,"Member street address - PROTECTED PII, not for metric view exposure"
+catalog.schema.fact_member,MemberAddress2,False,internal_only,"Member street address line 2 - PROTECTED PII, not for metric view exposure"
+catalog.schema.fact_member,PhoneNumber,False,internal_only,"Member phone number - PROTECTED PII, not for metric view exposure"
+catalog.schema.fact_member,PhoneNumberExt,False,internal_only,"Phone number extension - PROTECTED PII, not for metric view exposure"
+catalog.schema.fact_member,MemberEmailAddress,False,internal_only,"Member email address - PROTECTED PII, not for metric view exposure"
+catalog.schema.fact_member,MemberCity,True,dimension_candidate,Member city of residence - used for geographic analysis
+catalog.schema.fact_member,MemberState,True,dimension_candidate,Member state of residence - two-letter state code
+catalog.schema.fact_member,MemberZip,True,dimension_candidate,Member ZIP code - used for geographic analysis. Consider using 3-digit ZIP for smaller populations to protect privacy.
+catalog.schema.fact_member,MemberCountyName,True,dimension_candidate,Member county of residence
+catalog.schema.fact_member,MemberEthnicityCode,True,dimension_candidate,"Member ethnicity code (e.g., Hispanic/Latino classification)"
+catalog.schema.fact_member,MemberEthnicity,True,dimension_candidate,"Member ethnicity description (e.g., 'Hispanic or Latino', 'Not Hispanic or Latino')"
+catalog.schema.fact_member,MemberLanguageCode,True,dimension_candidate,"Member preferred language code (e.g., 'EN'=English, 'ES'=Spanish)"
+catalog.schema.fact_member,MemberLanguageDesc,True,dimension_candidate,"Member preferred language description (e.g., 'English', 'Spanish', 'Chinese', 'Vietnamese')"
+catalog.schema.fact_member,MemberStatusCode,True,dimension_candidate,"Member enrollment status code (e.g., 'A'=Active, 'T'=Terminated, 'P'=Pending)"
+catalog.schema.fact_member,MemberStatusDesc,True,dimension_candidate,"Member enrollment status description (e.g., 'Active', 'Terminated', 'Pending', 'Inactive')"
+catalog.schema.fact_member,MemberAgreementEffectiveDate,True,dimension_candidate,Date when member agreement became effective - typically the member's initial enrollment date
+catalog.schema.fact_member,FamilyMemberCaseNbr,True,dimension_candidate,Family or case number - groups members in the same family/household for Medicaid or social services
+catalog.schema.fact_member,GroupSysKey,False,internal_only,System key for member grouping - may link to family or subscriber group
+catalog.schema.fact_membermonth,MemberMonth_SK,False,surrogate_key,Unique system-generated identifier for each member-month combination
+catalog.schema.fact_membermonth,Member_SK,False,surrogate_key,Foreign key to member dimension - identifies which member this month record belongs to
+catalog.schema.fact_membermonth,MarketProduct_SK,False,surrogate_key,Foreign key to market product dimension - identifies the state and insurance program for this enrollment
+catalog.schema.fact_membermonth,MemberMonthStart,True,dimension_candidate,"First day of the month for this member enrollment record (e.g., 2024-01-01 for January 2024)"
+catalog.schema.fact_membermonth,NewMemberCount,True,measure_candidate,"Indicator for new member enrollment this month (1 if member is newly enrolled this month, 0 if not new). Sum to get total new member count."
+catalog.schema.fact_membermonth,ContinueMemberCount,True,measure_candidate,"Indicator for continuing member (1 if member was enrolled last month and continues this month, 0 if not continuing). Sum to get total continuing member count."
+catalog.schema.fact_membermonth,TermedMemberCount,True,measure_candidate,"Indicator for member termination (1 if member's enrollment ended this month, 0 if not termed). Sum to get total termed member count."
+catalog.schema.fact_membermonth,StartOfMonthAge_SK,True,dimension_candidate,Member tenure (in months) at the start of this month - indicates how long the member has been enrolled. May be a foreign key to an age/tenure dimension.
+catalog.schema.fact_membermonth,EndOfMonthAge_SK,True,dimension_candidate,Member tenure (in months) at the end of this month - indicates how long the member has been enrolled by month end. May be a foreign key to an age/tenure dimension.
+catalog.schema.fact_membermonth,MarketProgram_SK,False,internal_only,DEPRECATED: Legacy market/program foreign key - replaced by MarketProduct_SK
+catalog.schema.fact_membermonth,ACOClassPlan_SK,False,internal_only,ACG (Adjusted Clinical Groups) class plan - clinical risk segmentation. Detailed ACG analysis available in dedicated ACG tables.
+catalog.schema.fact_membermonth,ACOLookbackClassPlan_Sk,False,internal_only,ACG lookback class plan - historical clinical risk segmentation
+catalog.schema.fact_membermonth,ACGEndMonthDate,False,internal_only,ACG calculation end month date
+catalog.schema.fact_membermonth,ACGUnscaledRiskValue,False,internal_only,ACG unscaled risk score - raw clinical risk value before scaling
+catalog.schema.fact_membermonth,ACGChronicConditionCount,False,internal_only,Count of chronic conditions identified by ACG algorithm
+catalog.schema.fact_membermonth,ACGDialysisService,False,internal_only,ACG dialysis service indicator
+catalog.schema.fact_membermonth,ACGNursingService,False,internal_only,ACG nursing service indicator
+catalog.schema.fact_membermonth,ACGMajorProcedure,False,internal_only,ACG major procedure indicator
+catalog.schema.fact_membermonth,ACGCancerTreatment,False,internal_only,ACG cancer treatment indicator
+catalog.schema.fact_membermonth,ACGPsychotherapyService,False,internal_only,ACG psychotherapy service indicator
+catalog.schema.fact_membermonth,ACGMechanicalVentilation,False,internal_only,ACG mechanical ventilation indicator
+catalog.schema.fact_membermonth,ACGCalSSA,False,internal_only,ACG CalSSA (California SSA) indicator
+catalog.schema.fact_membermonth,ACGResourceUtilizationBand,False,internal_only,ACG Resource Utilization Band (RUB) - categorical risk grouping from low to very high resource use
+catalog.schema.fact_membermonth,ACGUnscaledConcurrentRisk,False,internal_only,ACG unscaled concurrent risk score
+catalog.schema.fact_membermonth,ACGProbabilityPersistentHighUser,False,internal_only,ACG probability of being a persistent high utilizer
+catalog.schema.fact_membermonth,ACGMajorADGCount,False,internal_only,ACG Major Aggregated Diagnosis Group count
+catalog.schema.fact_membermonth,ACGHospitalDominantMorbidityTypes,False,internal_only,ACG hospital dominant morbidity types count
+catalog.schema.fact_membermonth,ACGDiagnosesUsed,False,internal_only,Count of diagnoses used in ACG calculation
+catalog.schema.fact_membermonth,ACGFrailtyFlag,False,internal_only,ACG frailty indicator flag
+catalog.schema.fact_membermonth,ACGActiveIngredientCount,False,internal_only,ACG count of unique active pharmaceutical ingredients
+catalog.schema.fact_membermonth,ACGUniqueProviderCount,False,internal_only,ACG count of unique providers seen
+catalog.schema.fact_membermonth,ACGSpecialtyCount,False,internal_only,ACG count of specialty provider types seen
+catalog.schema.fact_membermonth,ACGGeneralistSeen,False,internal_only,ACG indicator if member saw a generalist/primary care provider
+catalog.schema.fact_membermonth,ACGGeneralistVisitCount,False,internal_only,ACG count of generalist/primary care visits
+catalog.schema.fact_membermonth,ACGManagementVisitCount,False,internal_only,ACG count of care management visits
+catalog.schema.fact_membermonth,ACGCoordinatedRiskCode,False,internal_only,ACG coordinated risk code classification
+catalog.schema.fact_membermonth,ACGFrailtyConceptCount,False,internal_only,ACG count of frailty concepts identified
+catalog.schema.fact_membermonth,ACGConcomitantOpioidUser,False,internal_only,ACG indicator for concomitant opioid use (multiple opioid prescriptions)
+catalog.schema.fact_membermonth,ACGChronicOpioidUser,False,internal_only,ACG indicator for chronic opioid use (long-term opioid therapy)
+catalog.schema.fact_membermonth,ACGOpioidDependent,False,internal_only,ACG indicator for opioid dependency diagnosis
+catalog.schema.fact_membermonth,ACGPatientNeedGroup,False,internal_only,ACG patient need group classification
+catalog.schema.fact_membermonth,DaysInMonth,True,measure_candidate,Number of days the member was enrolled during this month (1-31 depending on month length and enrollment dates)
+catalog.schema.fact_membermonth,DaysCompleted,True,measure_candidate,Number of days completed/enrolled as of calculation date (useful for in-progress months)
+catalog.schema.fact_membermonth,MonthDaysRatio,True,measure_candidate,Ratio of days enrolled to total days in month (DaysInMonth / days in calendar month). Used for prorating metrics for partial month enrollment.
+catalog.schema.fact_membermonth,MemberAidCategory_SK,False,surrogate_key,"Foreign key to member aid category dimension (may classify member eligibility category, aid type, etc.)"
+catalog.schema.fact_membermonth,COBFlag,True,dimension_candidate,Coordination of Benefits (COB) flag - indicates if member has other insurance coverage (primary or secondary)
+catalog.schema.fact_membermonth,AssignedProvider_SK,False,surrogate_key,Foreign key to provider dimension - identifies the member's assigned or attributed primary care provider
+catalog.schema.fact_membermonth,AttributedProvider_SK,False,surrogate_key,Foreign key to provider dimension - member's attributed provider (may differ from assigned provider based on attribution methodology)
+catalog.schema.fact_pharmacy,PharmFactClaimID,False,surrogate_key,Unique system-generated identifier for each pharmacy claim line
+catalog.schema.fact_pharmacy,RxNumber,True,dimension_candidate,Prescription (Rx) number - unique identifier for the prescription from the pharmacy system
+catalog.schema.fact_pharmacy,ExternalTransactionRefID,False,internal_only,External system transaction reference ID
+catalog.schema.fact_pharmacy,ExternalTransCrossRefID,False,internal_only,External system cross-reference transaction ID
+catalog.schema.fact_pharmacy,Practitioner_SK,False,surrogate_key,Foreign key to provider/practitioner dimension - identifies the prescribing provider
+catalog.schema.fact_pharmacy,Pharmacy_SK,False,surrogate_key,Foreign key to pharmacy dimension - identifies the dispensing pharmacy location
+catalog.schema.fact_pharmacy,Member_SK,False,surrogate_key,Foreign key to member dimension - identifies the member who received the prescription
+catalog.schema.fact_pharmacy,Subscriber_SK,False,surrogate_key,Foreign key to subscriber dimension - identifies the policyholder
+catalog.schema.fact_pharmacy,Ndc_SK,False,surrogate_key,Foreign key to NDC dimension - identifies the drug product dispensed
+catalog.schema.fact_pharmacy,MemberAgeAtRxFill_SK,False,surrogate_key,Foreign key to age dimension - member's age at time prescription was filled
+catalog.schema.fact_pharmacy,MarketProgram_SK,False,internal_only,DEPRECATED: Legacy market/program foreign key - likely replaced by MarketProduct_SK
+catalog.schema.fact_pharmacy,FilledDate_Sk,False,surrogate_key,Foreign key to date dimension - date the prescription was filled/dispensed by the pharmacy
+catalog.schema.fact_pharmacy,IncurredDate_SK,False,surrogate_key,Foreign key to date dimension - date the service was incurred (typically same as filled date for pharmacy)
+catalog.schema.fact_pharmacy,WrittenDate_Sk,False,surrogate_key,Foreign key to date dimension - date the prescription was written by the prescriber
+catalog.schema.fact_pharmacy,PaidDate_Sk,False,surrogate_key,Foreign key to date dimension - date the claim was paid by the plan
+catalog.schema.fact_pharmacy,TransactionSubmitDate_Sk,False,surrogate_key,Foreign key to date dimension - date the claim transaction was submitted to the plan
+catalog.schema.fact_pharmacy,PharmacyClaimAttribute_SK,False,surrogate_key,Foreign key to pharmacy claim attributes dimension - additional claim characteristics
+catalog.schema.fact_pharmacy,PBMGenericFlag,True,dimension_candidate,"PBM generic drug flag (1=generic, 0=brand). Indicates if the dispensed drug was generic or brand name."
+catalog.schema.fact_pharmacy,CompoundFlag,True,dimension_candidate,"Compound medication flag (1=compounded, 0=not compound). Indicates if the prescription was a pharmacy-compounded medication."
+catalog.schema.fact_pharmacy,RxClaimReversalFlag,True,dimension_candidate,"Claim reversal flag (1=reversal claim, 0=original claim). Indicates if this is a reversal of a previously paid claim."
+catalog.schema.fact_pharmacy,TransactionSubmitTime,False,internal_only,Timestamp when claim transaction was submitted
+catalog.schema.fact_pharmacy,TransactionSource,True,dimension_candidate,"Source system or channel for the claim transaction (e.g., retail pharmacy, mail order, specialty)"
+catalog.schema.fact_pharmacy,AuthorizedRefillCount,True,measure_candidate,Number of refills authorized by the prescriber for this prescription
+catalog.schema.fact_pharmacy,RefillNumber,True,dimension_candidate,"Refill number for this fill (0=original fill, 1=first refill, 2=second refill, etc.)"
+catalog.schema.fact_pharmacy,PrescribedQuantity,True,measure_candidate,"Quantity of drug prescribed by the provider (in units appropriate to the drug, e.g., tablets, ml)"
+catalog.schema.fact_pharmacy,DrugDaySupplyCount,True,measure_candidate,"Number of days the prescription is intended to last based on prescribed dosing (e.g., 30 days, 90 days)"
+catalog.schema.fact_pharmacy,ARX,False,internal_only,NEEDS REVIEW: ARX field - purpose unclear
+catalog.schema.fact_pharmacy,DrugMetricQuantity,True,measure_candidate,"Drug quantity in metric units - standardized measurement (e.g., grams, milliliters)"
+catalog.schema.fact_pharmacy,DrugStrengthQuantity,True,dimension_candidate,"Strength of the drug dispensed (e.g., '20mg', '500mg', '10mg/ml')"
+catalog.schema.fact_pharmacy,SubmissionClarificationCode,False,internal_only,Submission clarification code - indicates special processing circumstances
+catalog.schema.fact_pharmacy,CMSStatus,True,dimension_candidate,CMS (Centers for Medicare & Medicaid Services) claim status - used for Medicare Part D reporting
+catalog.schema.fact_pharmacy,NetIteration,False,internal_only,Net iteration - tracks claim resubmissions or adjustments
+catalog.schema.fact_pharmacy,AdjustmentTypeCode,True,dimension_candidate,Type of claim adjustment (if this is an adjusted claim)
+catalog.schema.fact_pharmacy,AdjustmentReasonCode,True,dimension_candidate,Reason for claim adjustment (if applicable)
+catalog.schema.fact_pharmacy,TransactionTypeCode,True,dimension_candidate,"Type of claim transaction (e.g., original claim, reversal, adjustment)"
+catalog.schema.fact_pharmacy,PharmacyDAWCode,True,dimension_candidate,"Dispense As Written (DAW) code - indicates if brand was dispensed when generic available (0=generic substituted, 1=brand medically necessary, 2=patient requested brand, etc.)"
+catalog.schema.fact_pharmacy,PatientAge,True,dimension_candidate,Patient age at time of prescription fill (in years)
+catalog.schema.fact_pharmacy,PatientPlaceOfServiceCode,True,dimension_candidate,"Place of service code - where the prescription was filled (e.g., retail pharmacy, mail order, nursing home)"
+catalog.schema.fact_pharmacy,PatientFacilityID,False,internal_only,"Facility identifier where patient received prescription (e.g., nursing home, hospital)"
+catalog.schema.fact_pharmacy,CMSPartDQualifiedFacilityFlag,True,dimension_candidate,CMS Part D qualified facility flag - indicates if facility qualifies for Part D coverage
+catalog.schema.fact_pharmacy,MailOrderDaysSupplyQuantity,True,measure_candidate,Days supply for mail order prescriptions (typically 90 days for mail order)
+catalog.schema.fact_pharmacy,PatientResidenceCode,True,dimension_candidate,"Patient residence code - indicates patient's care setting (e.g., home, nursing home, assisted living)"
+catalog.schema.fact_pharmacy,PatientPersonCode,False,internal_only,NEEDS REVIEW: Patient person code - purpose unclear
+catalog.schema.fact_pharmacy,PatientRelationshipCode,True,dimension_candidate,"Patient relationship to subscriber code (self, spouse, child, etc.)"
+catalog.schema.fact_pharmacy,PatientEligibilityClarificationCode,False,internal_only,Patient eligibility clarification code - special eligibility circumstances
+catalog.schema.fact_pharmacy,DrugTypeCode,True,dimension_candidate,"Drug type classification code (e.g., legend/prescription, OTC)"
+catalog.schema.fact_pharmacy,DrugDosageFormCode,True,dimension_candidate,"Drug dosage form code (tablet, capsule, liquid, injection, etc.)"
+catalog.schema.fact_pharmacy,DrugCategoryCode,True,dimension_candidate,Drug category classification code
+catalog.schema.fact_pharmacy,DEAClassificationCode,True,dimension_candidate,DEA (Drug Enforcement Administration) schedule classification (Schedule II-V for controlled substances)
+catalog.schema.fact_pharmacy,ReversalCount,True,measure_candidate,Count of reversals for this claim (typically 0 or 1)
+catalog.schema.fact_pharmacy,CopayAmount,True,measure_candidate,Copayment amount paid by the member at point of sale (member out-of-pocket)
+catalog.schema.fact_pharmacy,DisallowIngredientAmount,True,measure_candidate,Ingredient cost amount disallowed by the plan (not reimbursed)
+catalog.schema.fact_pharmacy,InvoicedAmount,True,measure_candidate,Total amount invoiced/billed by the pharmacy
+catalog.schema.fact_pharmacy,GrossDueAmount,True,measure_candidate,Gross amount due before any adjustments or discounts
+catalog.schema.fact_pharmacy,MOOPAmount,True,measure_candidate,Maximum Out-Of-Pocket (MOOP) amount applied to this claim toward member's annual limit
+catalog.schema.fact_pharmacy,OtherPayerRecognizedAmount,True,measure_candidate,Amount paid or recognized by another payer (coordination of benefits)
+catalog.schema.fact_pharmacy,DispensingSubmitAmount,True,measure_candidate,Dispensing fee amount submitted by pharmacy (pharmacy's charge for filling prescription)
+catalog.schema.fact_pharmacy,DispensingPaidAmount,True,measure_candidate,Dispensing fee amount paid to pharmacy by the plan
+catalog.schema.fact_pharmacy,IngredientSubmitAmount,True,measure_candidate,Ingredient cost amount submitted by pharmacy (drug product cost)
+catalog.schema.fact_pharmacy,IngredientPaidAmount,True,measure_candidate,Ingredient cost amount paid to pharmacy by the plan (actual reimbursed drug cost)
+catalog.schema.fact_pharmacy,PatientSubmitPaidAmount,True,measure_candidate,NEEDS REVIEW: Patient submit paid amount - may be related to member cost share submission
+catalog.schema.fact_pharmacy,PatientPaidAmount,True,measure_candidate,"Total amount paid by the patient/member (includes copay, coinsurance, deductible)"
+catalog.schema.fact_pharmacy,ProfessionalServiceSubmitAmount,True,measure_candidate,"Professional service fee submitted (e.g., vaccine administration, counseling)"
+catalog.schema.fact_pharmacy,UnitCostAmount,True,measure_candidate,Cost per unit of drug (ingredient cost divided by quantity)
+catalog.schema.fact_pharmacy,PaidProfessionalServiceFeeAmount,True,measure_candidate,Professional service fee amount paid to pharmacy
+catalog.schema.fact_pharmacy,PaidFlatSalesTaxAmount,True,measure_candidate,Flat sales tax amount paid on the prescription
+catalog.schema.fact_pharmacy,PaidPercentageSalesTaxAmount,True,measure_candidate,Percentage-based sales tax amount paid on the prescription
+catalog.schema.fact_pharmacy,AppliedPeriodicDeductableAmount,True,measure_candidate,"Amount of this claim applied to the member's periodic (e.g., annual) deductible"
+catalog.schema.fact_pharmacy,CoinsuranceAmount,True,measure_candidate,Coinsurance amount paid by member (percentage of drug cost)
+catalog.schema.fact_pharmacy,MaximumAllowableCostPriceAmount,True,measure_candidate,Maximum Allowable Cost (MAC) price - plan's maximum reimbursement for generic drugs
+catalog.schema.fact_pharmacy,UsualAndCustomaryChargeAmount,True,measure_candidate,Usual and Customary (U&C) charge - pharmacy's standard cash price for the prescription
+catalog.schema.fact_pharmacy,MaximumAllowableCostReducedCode,False,internal_only,Code indicating if MAC pricing was reduced or adjusted
+catalog.schema.fact_pharmacy,PharmacyServiceLevelCode,True,dimension_candidate,"Pharmacy service level code - indicates network tier (preferred, standard, non-preferred)"
+catalog.schema.fact_pharmacy,CardholderOtherCoverageCode,True,dimension_candidate,Code indicating cardholder has other coverage (coordination of benefits)
+catalog.schema.fact_pharmacy,PharmacyClassCode,True,dimension_candidate,"Pharmacy class code - classifies pharmacy type (retail, mail, specialty, etc.)"
+catalog.schema.fact_pharmacy,LastRefreshDate,False,internal_only,Last refresh/load timestamp for this record
+catalog.schema.fact_pharmacy,RxSource,True,dimension_candidate,"Source of the prescription (e.g., written, electronic, phone)"
